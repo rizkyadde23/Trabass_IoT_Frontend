@@ -36,4 +36,12 @@ export const getBikeStatus = async (bikeId) => {
   return response.data;
 };
 
+/**
+ * Membatalkan Transaksi Pending di Backend & Midtrans
+ */
+export const cancelRentTransaction = async (data) => {
+  const response = await api.post("/rent/cancel-transaction", data);
+  return response.data;
+};
+
 export default api;
