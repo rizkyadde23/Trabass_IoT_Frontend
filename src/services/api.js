@@ -44,4 +44,12 @@ export const cancelRentTransaction = async (data) => {
   return response.data;
 };
 
+/**
+ * Meminta Pengembalian Sepeda & Mengakhiri Sesi Sewa
+ */
+export const finishRentSession = async (data) => {
+  const response = await api.post("/rent/finish", data);
+  return response.data;
+};
+
 export default api;

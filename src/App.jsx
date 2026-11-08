@@ -10,13 +10,7 @@ import { useRental } from "./context/RentalContext";
 import Home from "./pages/Home";
 import Scan from "./pages/Scan";
 import Checkout from "./pages/Checkout";
-
-// Temporary Placeholder untuk Halaman Berikutnya
-const ActiveRentalPlaceholder = () => (
-  <div className="p-6 text-center text-xl font-bold">
-    Halaman Active Rental Session
-  </div>
-);
+import ActiveRental from "./pages/ActiveRental";
 
 function App() {
   const { activeRental } = useRental();
@@ -33,7 +27,7 @@ function App() {
           />
           <Route path="/scan" element={<Scan />} />
           <Route path="/checkout" element={<Checkout />} />
-          <Route path="/active" element={<ActiveRentalPlaceholder />} />
+          <Route path="/active" element={<ActiveRental />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
