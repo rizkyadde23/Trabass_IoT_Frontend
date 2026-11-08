@@ -52,4 +52,15 @@ export const finishRentSession = async (data) => {
   return response.data;
 };
 
+/**
+ * Konfirmasi Pembayaran Sukses dari Client Side
+ */
+export const confirmRentPayment = async (data) => {
+  const response = await api.post("/rent/confirm-payment", {
+    order_id: data.order_id,
+    bike_id: data.bike_id,
+  });
+  return response.data;
+};
+
 export default api;

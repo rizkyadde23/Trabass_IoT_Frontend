@@ -8,7 +8,7 @@ import {
   Sparkles,
   AlertCircle,
 } from "lucide-react";
-import { createRentTransaction } from "../services/api";
+import { createRentTransaction, confirmRentPayment } from "../services/api";
 import { useRental } from "../context/RentalContext";
 
 const DURATION_PACKAGES = [
@@ -64,14 +64,32 @@ const Checkout = () => {
       }
 
       window.snap.pay(snap_token, {
-        onSuccess: (result) => {
+        onSuccess: async (result) => {
           console.log("[MIDTRANS SUCCESS]", result);
-          startRentalSession({
-            order_id: order_id,
-            bike_id: bikeId,
-            duration_minutes: selectedPackage.minutes,
-          });
-          navigate("/active");
+          const orderIdToConfirm = result.order_id || order_id;
+          try {
+            // 1. Panggil backend untuk mengaktifkan status di database secara langsung
+            await confirmRentPayment({
+              order_id: orderIdToConfirm,
+              bike_id: bikeId,
+            });
+
+            // 2. Simpan sesi aktif ke Context & LocalStorage
+            startRentalSession({
+              order_id: orderIdToConfirm,
+              bike_id: bikeId,
+              duration_minutes: selectedPackage.minutes,
+            });
+
+            // 3. Pindah ke halaman Active Rental
+            navigate("/active");
+          } catch (confirmErr) {
+            console.error("Gagal mengonfirmasi status sewa:", confirmErr);
+            setErrorMessage(
+              "Pembayaran berhasil, namun gagal mengaktifkan sesi. Silakan coba lagi.",
+            );
+            setLoading(false);
+          }
         },
         onPending: (result) => {
           console.log("[MIDTRANS PENDING]", result);
