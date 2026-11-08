@@ -11,6 +11,7 @@ import Home from "./pages/Home";
 import Scan from "./pages/Scan";
 import Checkout from "./pages/Checkout";
 import ActiveRental from "./pages/ActiveRental";
+import OfflineDetector from "./components/OfflineDetector";
 
 function App() {
   const { activeRental } = useRental();
@@ -18,6 +19,7 @@ function App() {
   return (
     <Router>
       <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col max-w-md mx-auto shadow-xl relative overflow-hidden">
+        <OfflineDetector />
         <Routes>
           <Route
             path="/"
