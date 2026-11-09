@@ -4,6 +4,12 @@ import axios from "axios";
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 
+const TOKEN_STORAGE_KEY = "trabass_auth_token";
+const USER_STORAGE_KEY = "trabass_auth_user";
+const ACTIVE_RENTAL_STORAGE_KEY = "trabass_active_rental";
+const PENDING_ORDER_STORAGE_KEY = "trabass_pending_order";
+const AUTH_EXPIRED_EVENT = "trabass:auth-expired";
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -12,6 +18,74 @@ const api = axios.create({
   timeout: 15000,
 });
 
+// Sisipkan token JWT ke setiap request yang membutuhkan autentikasi.
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+});
+
+// Tangani token kedaluwarsa / tidak valid secara global.
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error.response?.status;
+    const url = error.config?.url || "";
+    const isLoginAttempt =
+      url.startsWith("/auth/login") || url.startsWith("/auth/register");
+
+    if (status === 401 && !isLoginAttempt) {
+      localStorage.removeItem(TOKEN_STORAGE_KEY);
+      localStorage.removeItem(USER_STORAGE_KEY);
+      localStorage.removeItem(ACTIVE_RENTAL_STORAGE_KEY);
+      localStorage.removeItem(PENDING_ORDER_STORAGE_KEY);
+
+      window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
+
+      if (!window.location.pathname.startsWith("/login")) {
+        window.location.assign("/login");
+      }
+    }
+
+    return Promise.reject(error);
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Autentikasi
+// ---------------------------------------------------------------------------
+export const registerUser = async ({
+  name,
+  phone_number,
+  email,
+  password,
+}) => {
+  const response = await api.post("/auth/register", {
+    name,
+    phone_number,
+    email,
+    password,
+  });
+  return response.data;
+};
+
+export const loginUser = async ({ email, password }) => {
+  const response = await api.post("/auth/login", { email, password });
+  return response.data;
+};
+
+export const getCurrentUser = async () => {
+  const response = await api.get("/auth/me");
+  return response.data;
+};
+
+// ---------------------------------------------------------------------------
+// Pembayaran & Sewa
+// ---------------------------------------------------------------------------
 /**
  * Mengambil konfigurasi tarif & batas sewa dari backend.
  * Frontend tidak boleh menebak harga sendiri.
@@ -23,12 +97,15 @@ export const getPaymentConfig = async () => {
 
 /**
  * Meminta Snap Token untuk Sewa Baru.
- * Backend menghitung nominal berdasarkan duration_minutes.
+ * Backend menghitung nominal berdasarkan duration_minutes dan mengambil
+ * user_id dari token JWT.
  */
-export const createRentTransaction = async ({ bike_id, user_id, duration_minutes }) => {
+export const createRentTransaction = async ({
+  bike_id,
+  duration_minutes,
+}) => {
   const response = await api.post("/rent/create-transaction", {
     bike_id,
-    user_id,
     duration_minutes,
   });
   return response.data;
@@ -37,10 +114,12 @@ export const createRentTransaction = async ({ bike_id, user_id, duration_minutes
 /**
  * Meminta Snap Token untuk Perpanjangan Sewa (Extend).
  */
-export const extendRentTransaction = async ({ bike_id, user_id, duration_minutes }) => {
+export const extendRentTransaction = async ({
+  bike_id,
+  duration_minutes,
+}) => {
   const response = await api.post("/rent/extend-transaction", {
     bike_id,
-    user_id,
     duration_minutes,
   });
   return response.data;
@@ -67,8 +146,8 @@ export const getRentStatus = async (orderId) => {
 /**
  * Meminta Pengembalian Sepeda & Mengakhiri Sesi Sewa.
  */
-export const finishRentSession = async ({ bike_id, user_id }) => {
-  const response = await api.post("/rent/finish", { bike_id, user_id });
+export const finishRentSession = async ({ bike_id }) => {
+  const response = await api.post("/rent/finish", { bike_id });
   return response.data;
 };
 

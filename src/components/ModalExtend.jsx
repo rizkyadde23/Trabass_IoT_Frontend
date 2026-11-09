@@ -33,7 +33,6 @@ const ModalExtend = ({
   isOpen,
   onClose,
   bikeId,
-  userId,
   onSuccessExtend,
 }) => {
   const {
@@ -319,7 +318,6 @@ const ModalExtend = ({
     try {
       const response = await extendRentTransaction({
         bike_id: bikeId,
-        user_id: userId,
         duration_minutes: selectedPackage.minutes,
       });
 

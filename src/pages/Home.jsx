@@ -1,12 +1,28 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { QrCode, Bike, ArrowRight, ShieldCheck, ReceiptText } from "lucide-react";
+import {
+  QrCode,
+  Bike,
+  ArrowRight,
+  ShieldCheck,
+  ReceiptText,
+  LogOut,
+} from "lucide-react";
 import { useRental } from "../context/RentalContext";
+import { useAuth } from "../context/AuthContext";
 
 const Home = () => {
   const [manualBikeId, setManualBikeId] = useState("");
   const navigate = useNavigate();
-  const { user, pendingOrder } = useRental();
+  const { pendingOrder, clearRentalSession, clearPendingOrder } = useRental();
+  const { user, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    clearRentalSession();
+    clearPendingOrder();
+    navigate("/login", { replace: true });
+  };
 
   const handleManualSubmit = (e) => {
     e.preventDefault();
@@ -36,10 +52,20 @@ const Home = () => {
               </p>
             </div>
           </div>
-          <span className="px-2.5 py-1 bg-brand-50 text-brand-700 text-[10px] font-bold rounded-full border border-brand-500/20 flex items-center space-x-1">
-            <ShieldCheck size={12} />
-            <span>Sistem Aktif</span>
-          </span>
+          <div className="flex items-center space-x-2">
+            <span className="px-2.5 py-1 bg-brand-50 text-brand-700 text-[10px] font-bold rounded-full border border-brand-500/20 flex items-center space-x-1">
+              <ShieldCheck size={12} />
+              <span>Sistem Aktif</span>
+            </span>
+            <button
+              onClick={handleLogout}
+              title="Keluar"
+              aria-label="Keluar"
+              className="p-2 bg-white text-slate-500 hover:text-red-600 rounded-xl shadow-sm border border-slate-200 transition-all active:scale-95"
+            >
+              <LogOut size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Banner pembayaran tertunda */}

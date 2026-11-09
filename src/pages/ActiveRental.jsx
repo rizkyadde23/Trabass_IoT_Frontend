@@ -12,6 +12,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { useRental } from "../context/RentalContext";
+import { useAuth } from "../context/AuthContext";
 import { finishRentSession, getApiErrorMessage } from "../services/api";
 import CountdownTimer from "../components/CountdownTimer";
 import ModalExtend from "../components/ModalExtend";
@@ -27,10 +28,10 @@ const ActiveRental = () => {
   const navigate = useNavigate();
   const {
     activeRental,
-    user,
     clearRentalSession,
     refreshActiveRental,
   } = useRental();
+  const { user } = useAuth();
 
   const [showExtendModal, setShowExtendModal] = useState(false);
   const [showFinishModal, setShowFinishModal] = useState(false);
@@ -151,7 +152,6 @@ const ActiveRental = () => {
     try {
       await finishRentSession({
         bike_id: activeRental.bike_id,
-        user_id: user.user_id,
       });
 
       clearRentalSession();
@@ -385,7 +385,6 @@ const ActiveRental = () => {
         isOpen={showExtendModal}
         onClose={handleCloseExtend}
         bikeId={activeRental.bike_id}
-        userId={user.user_id}
         onSuccessExtend={handleSuccessExtend}
       />
 

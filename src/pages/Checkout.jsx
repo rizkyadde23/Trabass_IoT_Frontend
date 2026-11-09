@@ -23,6 +23,7 @@ import {
 } from "../services/api";
 import { openSnapPayment } from "../services/midtransService";
 import { useRental } from "../context/RentalContext";
+import { useAuth } from "../context/AuthContext";
 
 const DURATION_OPTIONS = [
   {
@@ -54,12 +55,12 @@ const Checkout = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const {
-    user,
     setRentalFromBackend,
     pendingOrder,
     setPendingOrder,
     clearPendingOrder,
   } = useRental();
+  const { user } = useAuth();
 
   const bikeId =
     (searchParams.get("bike_id") || "").trim().toUpperCase() || "BK-001";
@@ -271,7 +272,6 @@ const Checkout = () => {
     try {
       const response = await createRentTransaction({
         bike_id: bikeId,
-        user_id: user.user_id,
         duration_minutes: selectedPackage.minutes,
       });
 

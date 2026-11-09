@@ -11,7 +11,6 @@ import { getRentStatus } from "../services/api";
 const RentalContext = createContext();
 
 const LOCAL_STORAGE_KEY = "trabass_active_rental";
-const USER_STORAGE_KEY = "trabass_user_data";
 const PENDING_STORAGE_KEY = "trabass_pending_order";
 
 const INVALID_ACTIVE_STATUSES = ["COMPLETED", "CANCELLED", "EXPIRED"];
@@ -55,18 +54,6 @@ const normalizeRentalState = (state = {}, fallback = {}) => {
 };
 
 export const RentalProvider = ({ children }) => {
-  // Mock Data User (Nanti disinkronkan dengan Auth Module)
-  const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem(USER_STORAGE_KEY);
-    return savedUser
-      ? JSON.parse(savedUser)
-      : {
-          user_id: 1,
-          name: "Rizky Adde",
-          phone_number: "081234567890",
-        };
-  });
-
   // State Sesi Sewa Aktif
   const [activeRental, setActiveRental] = useState(() => {
     const savedRental = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -111,11 +98,6 @@ export const RentalProvider = ({ children }) => {
       localStorage.removeItem(LOCAL_STORAGE_KEY);
     }
   }, [activeRental]);
-
-  // Simpan user
-  useEffect(() => {
-    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
-  }, [user]);
 
   // Simpan pending order
   useEffect(() => {
@@ -175,8 +157,6 @@ export const RentalProvider = ({ children }) => {
   return (
     <RentalContext.Provider
       value={{
-        user,
-        setUser,
         activeRental,
         pendingOrder,
         setRentalFromBackend: setActiveRentalFromBackend,
