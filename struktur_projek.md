@@ -10,7 +10,7 @@ Trabass-IoT-Frontend/
 │   ├── components/
 │   │   ├── admin/
 │   │   │   ├── AdminLayout.jsx          # Shell dashboard admin (topbar + konten)
-│   │   │   ├── AdminSidebar.jsx         # Sidebar navigasi & profil admin
+│   │   │   ├── AdminSidebar.jsx         # Sidebar navigasi, menu pengaturan & profil admin
 │   │   │   ├── AnomalyAlertBanner.jsx   # Banner peringatan gerakan MPU6050 saat locked
 │   │   │   ├── FleetMap.jsx             # Peta Leaflet, marker GPS & geofence
 │   │   │   ├── ImuMonitorPanel.jsx      # Panel monitoring sensor IMU MPU6050
@@ -29,7 +29,8 @@ Trabass-IoT-Frontend/
 │   │   └── useAdminBikes.js      # Polling data armada, geofence & status sinkron
 │   ├── pages/
 │   │   ├── AdminDashboard.jsx    # Statistik, peta ringkas, tabel & panel IMU
-│   │   ├── AdminMap.jsx          # Halaman peta armada penuh + panel IMU
+│   │   ├── AdminMap.jsx          # Halaman peta armada penuh (tanpa panel IMU)
+│   │   ├── AdminSettings.jsx     # Pengaturan pangkalan, geofence & pricing
 │   │   ├── Home.jsx              # Halaman utama & input manual/scan QR
 │   │   ├── Scan.jsx              # Halaman kamera pemindai QR Code
 │   │   ├── Checkout.jsx          # Halaman pilih paket durasi & pembayaran

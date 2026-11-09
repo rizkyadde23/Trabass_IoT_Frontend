@@ -1,9 +1,14 @@
 const RENTED_STATUSES = ["RENTED", "OVERDUE"];
 const READY_STATUSES = ["AVAILABLE", "RESERVED"];
 const MAINTENANCE_STATUSES = ["MAINTENANCE"];
-const ALERT_STATUSES = ["GEOFENCE_VIOLATION", "TAMPER_ALERT"];
 
 const normalizeStatus = (value) => String(value || "").toUpperCase();
+
+const isGeofenceViolation = (bike) =>
+  bike?.geofence_violated === true ||
+  normalizeStatus(bike?.status) === "GEOFENCE_VIOLATION";
+
+const isTamperAlert = (bike) => normalizeStatus(bike?.status) === "TAMPER_ALERT";
 
 /**
  * Status armada mengikuti nilai kolom `bikes.status` di backend.
@@ -74,14 +79,20 @@ export const computeFleetStats = (bikes = []) => {
   const countByStatuses = (statuses) =>
     statuses.reduce((total, status) => total + (statusCounts[status] || 0), 0);
 
+  const geofenceCount = list.filter(isGeofenceViolation).length;
+  const tamperCount = list.filter(isTamperAlert).length;
+  const alertCount = list.filter(
+    (bike) => isGeofenceViolation(bike) || isTamperAlert(bike),
+  ).length;
+
   return {
     total: list.length,
     rented: countByStatuses(RENTED_STATUSES),
     ready: countByStatuses(READY_STATUSES),
     maintenance: countByStatuses(MAINTENANCE_STATUSES),
-    geofence: statusCounts.GEOFENCE_VIOLATION || 0,
-    damaged: countByStatuses(["TAMPER_ALERT", ...MAINTENANCE_STATUSES]),
-    alert: countByStatuses(ALERT_STATUSES),
+    geofence: geofenceCount,
+    damaged: countByStatuses(MAINTENANCE_STATUSES) + tamperCount,
+    alert: alertCount,
     statusCounts,
   };
 };

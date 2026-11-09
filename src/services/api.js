@@ -19,8 +19,9 @@ const api = axios.create({
 });
 
 // Sisipkan token JWT ke setiap request yang membutuhkan autentikasi.
+// Token disimpan di sessionStorage sehingga sesi berakhir saat browser ditutup.
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+  const token = sessionStorage.getItem(TOKEN_STORAGE_KEY);
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -39,6 +40,10 @@ api.interceptors.response.use(
       url.startsWith("/auth/login") || url.startsWith("/auth/register");
 
     if (status === 401 && !isLoginAttempt) {
+      // Sesi dianggap berakhir: bersihkan token & data user agar guard route
+      // langsung mengarahkan pengguna ke halaman login.
+      sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+      sessionStorage.removeItem(USER_STORAGE_KEY);
       localStorage.removeItem(TOKEN_STORAGE_KEY);
       localStorage.removeItem(USER_STORAGE_KEY);
       localStorage.removeItem(ACTIVE_RENTAL_STORAGE_KEY);
@@ -160,6 +165,24 @@ export const finishRentSession = async ({ bike_id }) => {
  */
 export const getAdminBikes = async () => {
   const response = await api.get("/admin/bikes");
+  return response.data;
+};
+
+/**
+ * Mengambil pengaturan pangkalan, radius geofence, dan pricing.
+ * Endpoint admin-only.
+ */
+export const getAdminSettings = async () => {
+  const response = await api.get("/admin/settings");
+  return response.data;
+};
+
+/**
+ * Menyimpan pengaturan admin. Perubahan langsung diterapkan backend
+ * tanpa restart.
+ */
+export const updateAdminSettings = async (settings) => {
+  const response = await api.put("/admin/settings", settings);
   return response.data;
 };
 

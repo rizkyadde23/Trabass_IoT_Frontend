@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   LogOut,
   Map,
+  Settings,
   ShieldAlert,
   X,
 } from "lucide-react";
@@ -22,6 +23,12 @@ const MAIN_NAV = [
     label: "Peta Armada",
     to: "/admin/map",
     icon: Map,
+    end: true,
+  },
+  {
+    label: "Pengaturan",
+    to: "/admin/settings",
+    icon: Settings,
     end: true,
   },
 ];

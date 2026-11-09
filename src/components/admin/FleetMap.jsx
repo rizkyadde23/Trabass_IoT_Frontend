@@ -58,6 +58,9 @@ const STATION_ICON_SVG = `
 
 const getMarkerColor = (bike) => {
   if (isImuAnomaly(bike)) return STATUS_COLORS.TAMPER_ALERT;
+  if (bike?.geofence_violated === true) {
+    return STATUS_COLORS.GEOFENCE_VIOLATION;
+  }
 
   const status = String(bike?.status || "").toUpperCase();
   return STATUS_COLORS[status] || "#64748b";
