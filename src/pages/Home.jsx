@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { QrCode, Bike, ArrowRight, ShieldCheck } from "lucide-react";
+import { QrCode, Bike, ArrowRight, ShieldCheck, ReceiptText } from "lucide-react";
 import { useRental } from "../context/RentalContext";
 
 const Home = () => {
   const [manualBikeId, setManualBikeId] = useState("");
   const navigate = useNavigate();
-  const { user } = useRental();
+  const { user, pendingOrder } = useRental();
 
   const handleManualSubmit = (e) => {
     e.preventDefault();
@@ -41,6 +41,34 @@ const Home = () => {
             <span>Sistem Aktif</span>
           </span>
         </div>
+
+        {/* Banner pembayaran tertunda */}
+        {pendingOrder?.order_id && (
+          <button
+            onClick={() =>
+              navigate(
+                `/checkout?bike_id=${encodeURIComponent(pendingOrder.bike_id)}`,
+              )
+            }
+            className="w-full mt-2 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between text-left transition-all active:scale-[0.99]"
+          >
+            <div className="flex items-center space-x-3">
+              <div className="p-2.5 bg-amber-100 text-amber-700 rounded-xl">
+                <ReceiptText size={20} />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-amber-800">
+                  Pembayaran Belum Selesai
+                </p>
+                <p className="text-[11px] text-amber-700">
+                  Sepeda {pendingOrder.bike_id} • Rp{" "}
+                  {Number(pendingOrder.amount || 0).toLocaleString("id-ID")}
+                </p>
+              </div>
+            </div>
+            <ArrowRight size={18} className="text-amber-700 shrink-0" />
+          </button>
+        )}
 
         {/* Card Hero Scan QR */}
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col items-center text-center my-5">

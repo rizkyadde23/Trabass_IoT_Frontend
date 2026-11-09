@@ -27,7 +27,7 @@ const QRScanner = ({ onScanSuccess, onScanError }) => {
     const startScanner = async () => {
       try {
         await scanner.start(
-          { facingMode: "user" },
+          { facingMode: "environment" },
           {
             fps: 10,
             qrbox: { width: 220, height: 220 },

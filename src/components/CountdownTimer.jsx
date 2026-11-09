@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Clock, AlertTriangle } from "lucide-react";
+
+const WARNING_THRESHOLD_SECONDS = 300;
 
 const CountdownTimer = ({
   endTime,
@@ -12,17 +14,38 @@ const CountdownTimer = ({
     seconds: 0,
     totalSeconds: 0,
   });
-  const [isWarning, setIsWarning] = useState(false);
+
+  const onExpireRef = useRef(onExpire);
+  const onWarningRef = useRef(onWarning);
+  const expiredNotifiedRef = useRef(false);
+  const warningNotifiedRef = useRef(false);
 
   useEffect(() => {
+    onExpireRef.current = onExpire;
+    onWarningRef.current = onWarning;
+  }, [onExpire, onWarning]);
+
+  useEffect(() => {
+    expiredNotifiedRef.current = false;
+    warningNotifiedRef.current = false;
+
+    const target = new Date(endTime).getTime();
+
+    if (Number.isNaN(target)) {
+      setTimeLeft({ minutes: 0, seconds: 0, totalSeconds: 0 });
+      return undefined;
+    }
+
     const calculateTimeLeft = () => {
-      const now = new Date().getTime();
-      const target = new Date(endTime).getTime();
-      const difference = target - now;
+      const difference = target - Date.now();
 
       if (difference <= 0) {
         setTimeLeft({ minutes: 0, seconds: 0, totalSeconds: 0 });
-        if (onExpire) onExpire();
+
+        if (!expiredNotifiedRef.current) {
+          expiredNotifiedRef.current = true;
+          onExpireRef.current?.();
+        }
         return;
       }
 
@@ -32,10 +55,12 @@ const CountdownTimer = ({
 
       setTimeLeft({ minutes, seconds, totalSeconds });
 
-      // Indikator Warning jika sisa waktu <= 5 menit (300 detik)
-      if (totalSeconds <= 300 && !isWarning) {
-        setIsWarning(true);
-        if (onWarning) onWarning(minutes);
+      if (
+        totalSeconds <= WARNING_THRESHOLD_SECONDS &&
+        !warningNotifiedRef.current
+      ) {
+        warningNotifiedRef.current = true;
+        onWarningRef.current?.(Math.ceil(totalSeconds / 60));
       }
     };
 
@@ -45,8 +70,16 @@ const CountdownTimer = ({
     return () => clearInterval(timer);
   }, [endTime]);
 
-  // Hitung persentase progress bar
-  const totalSecondsInitial = totalDurationMinutes * 60;
+  const isWarning =
+    timeLeft.totalSeconds > 0 &&
+    timeLeft.totalSeconds <= WARNING_THRESHOLD_SECONDS;
+
+  const durationSeconds = Number(totalDurationMinutes) * 60;
+  const totalSecondsInitial =
+    Number.isFinite(durationSeconds) && durationSeconds > 0
+      ? durationSeconds
+      : Math.max(timeLeft.totalSeconds, 1);
+
   const progressPercent = Math.min(
     100,
     Math.max(0, (timeLeft.totalSeconds / totalSecondsInitial) * 100),
@@ -74,7 +107,7 @@ const CountdownTimer = ({
       </div>
 
       {/* Warning Text jika <= 5 menit */}
-      {isWarning && timeLeft.totalSeconds > 0 && (
+      {isWarning && (
         <div className="mt-4 px-3 py-1.5 bg-amber-100 text-amber-800 rounded-full text-xs font-semibold flex items-center space-x-1.5 animate-bounce">
           <AlertTriangle size={14} />
           <span>Sisa waktu kurang dari 5 menit!</span>
