@@ -131,12 +131,12 @@ Dokumen ini memuat panduan komprehensif alur pengembangan antarmuka pengguna (*F
 
 ## 📌 Checklist Status Pengerjaan Frontend
 
-* [ ] **Langkah 3.1.1:** Core Infrastructure, Axios `api.js`, `RentalContext.jsx`, & App Router.
-* [ ] **Langkah 3.1.2:** QR Scanner Component & Page (`html5-qrcode`).
-* [ ] **Langkah 3.1.3:** Checkout Page & Midtrans Snap SDK Client Integration.
-* [ ] **Langkah 3.1.4:** Active Rental Page & Live Countdown Timer.
-* [ ] **Langkah 3.1.5:** Extend Rental Modal & Logic.
-* [ ] **Langkah 3.1.6:** PWA Manifest & Service Worker Registration.
-* [ ] **Langkah 3.2.1:** Admin Dashboard Layout & Summary Cards.
+* [x] **Langkah 3.1.1:** Core Infrastructure, Axios `api.js`, `RentalContext.jsx`, & App Router.
+* [x] **Langkah 3.1.2:** QR Scanner Component & Page (`html5-qrcode`).
+* [x] **Langkah 3.1.3:** Checkout Page & Midtrans Snap SDK Client Integration.
+* [x] **Langkah 3.1.4:** Active Rental Page & Live Countdown Timer.
+* [x] **Langkah 3.1.5:** Extend Rental Modal & Logic.
+* [x] **Langkah 3.1.6:** PWA Manifest & Service Worker Registration.
+* [x] **Langkah 3.2.1:** Admin Dashboard Layout & Summary Cards.
 * [ ] **Langkah 3.2.2:** Leaflet.js Interactive Live Map & Geofence Polygon.
 * [ ] **Langkah 3.2.3:** Admin Remote Control Panel & Incident Feed.

@@ -151,6 +151,18 @@ export const finishRentSession = async ({ bike_id }) => {
   return response.data;
 };
 
+// ---------------------------------------------------------------------------
+// Dashboard Admin
+// ---------------------------------------------------------------------------
+/**
+ * Mengambil daftar seluruh armada untuk dashboard admin.
+ * Backend membatasi endpoint ini hanya untuk token dengan role admin.
+ */
+export const getAdminBikes = async () => {
+  const response = await api.get("/admin/bikes");
+  return response.data;
+};
+
 /**
  * Helper pesan error agar response backend tampil konsisten di UI.
  */

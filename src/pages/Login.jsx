@@ -46,7 +46,9 @@ const Login = () => {
       }
 
       login({ token: data.token, user: data.user });
-      navigate(from, { replace: true });
+      navigate(data.user?.role === "admin" ? "/admin" : from, {
+        replace: true,
+      });
     } catch (error) {
       setErrorMessage(
         getApiErrorMessage(error, "Gagal login. Silakan coba lagi."),

@@ -14,26 +14,44 @@ import Checkout from "./pages/Checkout";
 import ActiveRental from "./pages/ActiveRental";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import AdminDashboard from "./pages/AdminDashboard";
 import OfflineDetector from "./components/OfflineDetector";
-import { GuestRoute, ProtectedRoute } from "./components/ProtectedRoute";
+import MobileLayout from "./components/MobileLayout";
+import AdminLayout from "./components/admin/AdminLayout";
+import {
+  AdminRoute,
+  GuestRoute,
+  RenterRoute,
+} from "./components/ProtectedRoute";
 
 function App() {
   const { activeRental } = useRental();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAdmin } = useAuth();
+
+  const fallbackPath = isAuthenticated ? (isAdmin ? "/admin" : "/") : "/login";
 
   return (
     <Router>
-      <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col max-w-md mx-auto shadow-xl relative overflow-hidden">
-        <OfflineDetector />
-        <Routes>
-          {/* Hanya untuk user yang belum login */}
+      <OfflineDetector />
+      <Routes>
+        {/* Halaman autentikasi memakai shell mobile yang sama dengan PWA. */}
+        <Route element={<MobileLayout />}>
           <Route element={<GuestRoute />}>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
           </Route>
+        </Route>
 
-          {/* Wajib login */}
-          <Route element={<ProtectedRoute />}>
+        {/* Dashboard admin memakai layout lebar penuh. */}
+        <Route element={<AdminRoute />}>
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboard />} />
+          </Route>
+        </Route>
+
+        {/* Halaman penyewa tetap memakai shell mobile PWA. */}
+        <Route element={<RenterRoute />}>
+          <Route element={<MobileLayout />}>
             <Route
               path="/"
               element={
@@ -44,15 +62,10 @@ function App() {
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/active" element={<ActiveRental />} />
           </Route>
+        </Route>
 
-          <Route
-            path="*"
-            element={
-              <Navigate to={isAuthenticated ? "/" : "/login"} replace />
-            }
-          />
-        </Routes>
-      </div>
+        <Route path="*" element={<Navigate to={fallbackPath} replace />} />
+      </Routes>
     </Router>
   );
 }

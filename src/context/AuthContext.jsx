@@ -31,6 +31,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(readStoredUser);
 
   const isAuthenticated = Boolean(token && user?.user_id);
+  const isAdmin = Boolean(isAuthenticated && user?.role === "admin");
 
   // Sinkronkan token ke localStorage.
   useEffect(() => {
@@ -73,10 +74,11 @@ export const AuthProvider = ({ children }) => {
       token,
       user,
       isAuthenticated,
+      isAdmin,
       login,
       logout,
     }),
-    [token, user, isAuthenticated, login, logout],
+    [token, user, isAuthenticated, isAdmin, login, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
