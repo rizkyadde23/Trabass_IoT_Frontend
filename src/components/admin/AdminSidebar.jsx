@@ -18,12 +18,15 @@ const MAIN_NAV = [
     icon: LayoutDashboard,
     end: true,
   },
+  {
+    label: "Peta Armada",
+    to: "/admin/map",
+    icon: Map,
+    end: true,
+  },
 ];
 
-const UPCOMING_NAV = [
-  { label: "Peta Armada", icon: Map },
-  { label: "Insiden Keamanan", icon: ShieldAlert },
-];
+const UPCOMING_NAV = [{ label: "Insiden Keamanan", icon: ShieldAlert }];
 
 const AdminSidebar = ({ isOpen, onClose }) => {
   const navigate = useNavigate();

@@ -9,9 +9,12 @@ Trabass-IoT-Frontend/
 │   │   └── logo.svg
 │   ├── components/
 │   │   ├── admin/
-│   │   │   ├── AdminLayout.jsx   # Shell dashboard admin (topbar + konten)
-│   │   │   ├── AdminSidebar.jsx  # Sidebar navigasi & profil admin
-│   │   │   └── StatCard.jsx      # Kartu statistik ringkasan armada
+│   │   │   ├── AdminLayout.jsx          # Shell dashboard admin (topbar + konten)
+│   │   │   ├── AdminSidebar.jsx         # Sidebar navigasi & profil admin
+│   │   │   ├── AnomalyAlertBanner.jsx   # Banner peringatan gerakan MPU6050 saat locked
+│   │   │   ├── FleetMap.jsx             # Peta Leaflet, marker GPS & geofence
+│   │   │   ├── ImuMonitorPanel.jsx      # Panel monitoring sensor IMU MPU6050
+│   │   │   └── StatCard.jsx             # Kartu statistik ringkasan armada
 │   │   ├── QRScanner.jsx         # Komponen scanner kamera HTML5-QRCode
 │   │   ├── CountdownTimer.jsx    # Live timer hitung mundur waktu sewa
 │   │   ├── Header.jsx            # Navigasi & status koneksi
@@ -22,8 +25,11 @@ Trabass-IoT-Frontend/
 │   ├── context/
 │   │   ├── AuthContext.jsx       # State autentikasi, user & role
 │   │   └── RentalContext.jsx     # State management global sesi sewa
+│   ├── hooks/
+│   │   └── useAdminBikes.js      # Polling data armada, geofence & status sinkron
 │   ├── pages/
-│   │   ├── AdminDashboard.jsx    # Statistik armada, tabel & placeholder peta
+│   │   ├── AdminDashboard.jsx    # Statistik, peta ringkas, tabel & panel IMU
+│   │   ├── AdminMap.jsx          # Halaman peta armada penuh + panel IMU
 │   │   ├── Home.jsx              # Halaman utama & input manual/scan QR
 │   │   ├── Scan.jsx              # Halaman kamera pemindai QR Code
 │   │   ├── Checkout.jsx          # Halaman pilih paket durasi & pembayaran
@@ -34,10 +40,11 @@ Trabass-IoT-Frontend/
 │   │   ├── api.js                # Service Axios ke Backend Node.js
 │   │   └── midtransService.js    # Wrapper pemanggilan Midtrans Snap SDK
 │   ├── utils/
-│   │   └── fleetStats.js         # Helper statistik & metadata status armada
+│   │   ├── fleetStats.js         # Helper statistik & metadata status armada
+│   │   └── fleetTelemetry.js     # Helper geofence, IMU, format sensor & waktu
 │   ├── App.jsx                   # Routing PWA penyewa & dashboard admin
-│   ├── index.css                 # Konfigurasi Tailwind CSS
-│   ├── main.jsx                  # Root render React
+│   ├── index.css                 # Tailwind CSS + styling marker Leaflet
+│   ├── main.jsx                  # Root render React & import CSS Leaflet
 │   └── registerServiceWorker.js  # Registrasi Service Worker PWA
 ├── index.html                    # Entry point HTML & script Snap Midtrans
 ├── vite.config.js                # Konfigurasi Vite & PWA Plugin

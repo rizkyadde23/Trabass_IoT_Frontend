@@ -109,14 +109,18 @@ Dokumen ini memuat panduan komprehensif alur pengembangan antarmuka pengguna (*F
 * **Output yang Dihasilkan:**
   * Layout dashboard admin yang rapi dengan indikator statistik utama armada.
 
-#### **Langkah 3.2.2: Peta Interaktif Real-time (Leaflet.js Integration)**
-* **Fokus Utama:** Memvisualisasikan lokasi sepeda terkini dan batas area geofencing pada peta.
+#### **Langkah 3.2.2: Peta Interaktif Real-time (Leaflet.js Integration) & Monitoring IMU MPU6050**
+* **Fokus Utama:** Memvisualisasikan lokasi sepeda terkini, batas area geofencing, dan status gerak sensor IMU MPU6050 pada peta.
 * **Kegiatan:**
-  1. Mengintegrasikan `react-leaflet` dan OpenStreetMap pada dashboard.
-  2. Menggambar lingkaran batas geofence (*Geofence Circle Radius 500m*) di sekitar titik koordinat pusat pangkalan.
+  1. Mengintegrasikan `react-leaflet` dan OpenStreetMap pada dashboard serta halaman khusus `/admin/map`.
+  2. Menggambar lingkaran batas geofence (*Geofence Circle Radius 500m*) di sekitar titik koordinat pusat pangkalan yang dikirim backend.
   3. Memasang marker dinamis untuk setiap sepeda yang posisinya diperbarui secara berkala dari data Redis/MySQL backend (`GET /api/admin/bikes`).
+  4. Menambahkan panel monitoring IMU MPU6050 yang membedakan kondisi *unlocked* (sensing saja) dan *locked* (sensing + anomali).
+  5. Menampilkan banner peringatan dashboard, marker berdenyut, serta data sensor terakhir ketika terdeteksi gerakan saat sepeda terkunci.
+  6. Menyelaraskan cooldown notifikasi WA, metadata alert, dan auto-reset status `TAMPER_ALERT` di backend.
 * **Output yang Dihasilkan:**
   * Peta interaktif yang menampilkan posisi seluruh armada sepeda secara live beserta zona aman pangkalan.
+  * Panel monitoring MPU6050 dengan peringatan visual dan notifikasi WA saat terjadi gerakan anomali pada sepeda locked.
 
 #### **Langkah 3.2.3: Remote Control Panel & Incident Push Feed**
 * **Fokus Utama:** Memungkinkan admin melakukan kuncian paksa (*Force Remote Lock/Unlock*) dan menerima alert insiden darurat.
@@ -138,5 +142,5 @@ Dokumen ini memuat panduan komprehensif alur pengembangan antarmuka pengguna (*F
 * [x] **Langkah 3.1.5:** Extend Rental Modal & Logic.
 * [x] **Langkah 3.1.6:** PWA Manifest & Service Worker Registration.
 * [x] **Langkah 3.2.1:** Admin Dashboard Layout & Summary Cards.
-* [ ] **Langkah 3.2.2:** Leaflet.js Interactive Live Map & Geofence Polygon.
+* [x] **Langkah 3.2.2:** Leaflet.js Interactive Live Map, Geofence, Marker GPS, & Monitoring IMU MPU6050.
 * [ ] **Langkah 3.2.3:** Admin Remote Control Panel & Incident Feed.

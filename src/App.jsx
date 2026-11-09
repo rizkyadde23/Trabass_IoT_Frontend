@@ -15,6 +15,7 @@ import ActiveRental from "./pages/ActiveRental";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminMap from "./pages/AdminMap";
 import OfflineDetector from "./components/OfflineDetector";
 import MobileLayout from "./components/MobileLayout";
 import AdminLayout from "./components/admin/AdminLayout";
@@ -46,6 +47,7 @@ function App() {
         <Route element={<AdminRoute />}>
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
+            <Route path="map" element={<AdminMap />} />
           </Route>
         </Route>
 
