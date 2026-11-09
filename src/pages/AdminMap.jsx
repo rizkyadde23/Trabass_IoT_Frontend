@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import {
   AlertCircle,
   ArrowLeft,
@@ -7,11 +7,15 @@ import {
   RefreshCw,
 } from "lucide-react";
 import useAdminBikes from "../hooks/useAdminBikes";
+import useBikeCommands from "../hooks/useBikeCommands";
 import { formatDistance, formatTime } from "../utils/fleetTelemetry";
 import FleetMap from "../components/admin/FleetMap";
 import AnomalyAlertBanner from "../components/admin/AnomalyAlertBanner";
 
 const AdminMap = () => {
+  const location = useLocation();
+  const initialFocusBikeId = location.state?.bikeId || null;
+
   const {
     bikes,
     geofence,
@@ -24,8 +28,21 @@ const AdminMap = () => {
     initialLoading,
   } = useAdminBikes();
 
-  const [selectedBikeId, setSelectedBikeId] = useState(null);
-  const [focusNonce, setFocusNonce] = useState(0);
+  const { commandStates, sendCommand, clearFeedback } = useBikeCommands({
+    onSuccess: () => {
+      void refresh({ silent: true });
+    },
+  });
+
+  const [selectedBikeId, setSelectedBikeId] = useState(initialFocusBikeId);
+  const [focusNonce, setFocusNonce] = useState(initialFocusBikeId ? 1 : 0);
+
+  useEffect(() => {
+    if (!location.state?.bikeId) return;
+
+    setSelectedBikeId(location.state.bikeId);
+    setFocusNonce((current) => current + 1);
+  }, [location.state]);
 
   const handleSelectBike = (bikeId) => {
     setSelectedBikeId(bikeId);
@@ -138,6 +155,9 @@ const AdminMap = () => {
           selectedBikeId={selectedBikeId}
           focusNonce={focusNonce}
           onSelectBike={handleSelectBike}
+          onSendCommand={sendCommand}
+          commandStates={commandStates}
+          onClearFeedback={clearFeedback}
           heightClass="h-[calc(100vh-19rem)] min-h-[520px]"
         />
 

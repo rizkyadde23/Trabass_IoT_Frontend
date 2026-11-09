@@ -187,6 +187,66 @@ export const updateAdminSettings = async (settings) => {
 };
 
 /**
+ * Mengirim perintah remote ke sepeda melalui admin endpoint.
+ * Action: FORCE_LOCK, FORCE_UNLOCK, ALARM_OFF.
+ */
+export const sendBikeCommand = async ({ bike_id, action, reason }) => {
+  const response = await api.post("/admin/bike-command", {
+    bike_id,
+    action,
+    reason,
+  });
+  return response.data;
+};
+
+/**
+ * Mengambil riwayat insiden keamanan untuk Incident Feed.
+ * Filter dan cursor dikirim sebagai query string.
+ */
+export const getAdminIncidents = async ({
+  status = "ALL",
+  type = "ALL",
+  bikeId = "",
+  afterId = null,
+  beforeId = null,
+  limit = 20,
+} = {}) => {
+  const params = { limit };
+
+  if (status && status !== "ALL") params.status = status;
+  if (type && type !== "ALL") params.type = type;
+  if (bikeId) params.bike_id = bikeId;
+  if (afterId) params.after_id = afterId;
+  if (beforeId) params.before_id = beforeId;
+
+  const response = await api.get("/admin/incidents", { params });
+  return response.data;
+};
+
+/**
+ * Mengambil audit perintah admin untuk tab Riwayat Perintah.
+ */
+export const getAdminCommandLogs = async ({
+  bikeId = "",
+  action = "ALL",
+  status = "ALL",
+  afterId = null,
+  beforeId = null,
+  limit = 20,
+} = {}) => {
+  const params = { limit };
+
+  if (bikeId) params.bike_id = bikeId;
+  if (action && action !== "ALL") params.action = action;
+  if (status && status !== "ALL") params.status = status;
+  if (afterId) params.after_id = afterId;
+  if (beforeId) params.before_id = beforeId;
+
+  const response = await api.get("/admin/command-logs", { params });
+  return response.data;
+};
+
+/**
  * Helper pesan error agar response backend tampil konsisten di UI.
  */
 export const getApiErrorMessage = (error, fallback = "Terjadi kesalahan.") => {

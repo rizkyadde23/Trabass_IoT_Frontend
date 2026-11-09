@@ -12,8 +12,10 @@ Trabass-IoT-Frontend/
 │   │   │   ├── AdminLayout.jsx          # Shell dashboard admin (topbar + konten)
 │   │   │   ├── AdminSidebar.jsx         # Sidebar navigasi, menu pengaturan & profil admin
 │   │   │   ├── AnomalyAlertBanner.jsx   # Banner peringatan gerakan MPU6050 saat locked
-│   │   │   ├── FleetMap.jsx             # Peta Leaflet, marker GPS & geofence
+│   │   │   ├── CommandHistory.jsx       # Tabel audit perintah remote admin
+│   │   │   ├── FleetMap.jsx             # Peta Leaflet, marker GPS, geofence & kontrol remote
 │   │   │   ├── ImuMonitorPanel.jsx      # Panel monitoring sensor IMU MPU6050
+│   │   │   ├── IncidentFeed.jsx         # Feed insiden tamper & pelanggaran geofence
 │   │   │   └── StatCard.jsx             # Kartu statistik ringkasan armada
 │   │   ├── QRScanner.jsx         # Komponen scanner kamera HTML5-QRCode
 │   │   ├── CountdownTimer.jsx    # Live timer hitung mundur waktu sewa
@@ -26,10 +28,14 @@ Trabass-IoT-Frontend/
 │   │   ├── AuthContext.jsx       # State autentikasi, user & role
 │   │   └── RentalContext.jsx     # State management global sesi sewa
 │   ├── hooks/
-│   │   └── useAdminBikes.js      # Polling data armada, geofence & status sinkron
+│   │   ├── useAdminBikes.js      # Polling data armada, geofence & status sinkron
+│   │   ├── useAdminCommandLogs.js # Polling audit perintah admin
+│   │   ├── useAdminIncidents.js  # Polling feed insiden dengan cursor & filter
+│   │   └── useBikeCommands.js    # Kirim perintah remote & state pending per sepeda
 │   ├── pages/
-│   │   ├── AdminDashboard.jsx    # Statistik, peta ringkas, tabel & panel IMU
-│   │   ├── AdminMap.jsx          # Halaman peta armada penuh (tanpa panel IMU)
+│   │   ├── AdminDashboard.jsx    # Statistik, peta ringkas, tabel, panel IMU & feed insiden
+│   │   ├── AdminMap.jsx          # Halaman peta armada penuh + kontrol remote marker
+│   │   ├── AdminIncidents.jsx    # Halaman insiden keamanan & riwayat perintah
 │   │   ├── AdminSettings.jsx     # Pengaturan pangkalan, geofence & pricing
 │   │   ├── Home.jsx              # Halaman utama & input manual/scan QR
 │   │   ├── Scan.jsx              # Halaman kamera pemindai QR Code

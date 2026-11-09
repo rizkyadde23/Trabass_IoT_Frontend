@@ -23,10 +23,13 @@ import {
   isImuAnomaly,
 } from "../utils/fleetTelemetry";
 import useAdminBikes from "../hooks/useAdminBikes";
+import useAdminIncidents from "../hooks/useAdminIncidents";
+import useBikeCommands from "../hooks/useBikeCommands";
 import StatCard from "../components/admin/StatCard";
 import FleetMap from "../components/admin/FleetMap";
 import ImuMonitorPanel from "../components/admin/ImuMonitorPanel";
 import AnomalyAlertBanner from "../components/admin/AnomalyAlertBanner";
+import IncidentFeed from "../components/admin/IncidentFeed";
 
 const formatTime = (value) => {
   if (!value) return "—";
@@ -81,6 +84,22 @@ const AdminDashboard = () => {
     refreshInterval,
     initialLoading,
   } = useAdminBikes();
+
+  const { commandStates, sendCommand, clearFeedback } = useBikeCommands({
+    onSuccess: () => {
+      void refresh({ silent: true });
+    },
+  });
+
+  const {
+    incidents,
+    activeCount: incidentActiveCount,
+    newCount: incidentNewCount,
+    loading: incidentsLoading,
+    error: incidentsError,
+    refresh: refreshIncidents,
+    markSeen: markIncidentsSeen,
+  } = useAdminIncidents({ limit: 8 });
 
   const [selectedBikeId, setSelectedBikeId] = useState(null);
   const [focusNonce, setFocusNonce] = useState(0);
@@ -291,6 +310,9 @@ const AdminDashboard = () => {
           selectedBikeId={selectedBikeId}
           focusNonce={focusNonce}
           onSelectBike={handleSelectBike}
+          onSendCommand={sendCommand}
+          commandStates={commandStates}
+          onClearFeedback={clearFeedback}
         />
 
         <div className="flex flex-col gap-1 border-t border-slate-100 bg-slate-50/60 px-5 py-2.5 text-[10px] text-slate-400 sm:flex-row sm:items-center sm:justify-between">
@@ -554,6 +576,18 @@ const AdminDashboard = () => {
             geofence={geofence}
             selectedBikeId={selectedBikeId}
             onSelectBike={handleSelectBike}
+          />
+
+          <IncidentFeed
+            incidents={incidents}
+            activeCount={incidentActiveCount}
+            newCount={incidentNewCount}
+            loading={incidentsLoading}
+            error={incidentsError}
+            onRefresh={refreshIncidents}
+            onSelectBike={handleSelectBike}
+            onMarkSeen={markIncidentsSeen}
+            compact
           />
         </div>
       </div>

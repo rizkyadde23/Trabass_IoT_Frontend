@@ -26,14 +26,18 @@ const MAIN_NAV = [
     end: true,
   },
   {
+    label: "Insiden Keamanan",
+    to: "/admin/incidents",
+    icon: ShieldAlert,
+    end: true,
+  },
+  {
     label: "Pengaturan",
     to: "/admin/settings",
     icon: Settings,
     end: true,
   },
 ];
-
-const UPCOMING_NAV = [{ label: "Insiden Keamanan", icon: ShieldAlert }];
 
 const AdminSidebar = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
@@ -110,26 +114,6 @@ const AdminSidebar = ({ isOpen, onClose }) => {
               <Icon size={18} />
               <span>{label}</span>
             </NavLink>
-          ))}
-
-          <p className="px-3 pb-2 pt-5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
-            Tahap Berikutnya
-          </p>
-
-          {UPCOMING_NAV.map(({ label, icon: Icon }) => (
-            <div
-              key={label}
-              aria-disabled="true"
-              className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-slate-500"
-            >
-              <span className="flex items-center gap-3">
-                <Icon size={18} />
-                <span>{label}</span>
-              </span>
-              <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-slate-400">
-                Segera
-              </span>
-            </div>
           ))}
         </nav>
 

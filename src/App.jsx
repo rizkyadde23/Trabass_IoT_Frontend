@@ -17,6 +17,7 @@ import Register from "./pages/Register";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminMap from "./pages/AdminMap";
 import AdminSettings from "./pages/AdminSettings";
+import AdminIncidents from "./pages/AdminIncidents";
 import OfflineDetector from "./components/OfflineDetector";
 import MobileLayout from "./components/MobileLayout";
 import AdminLayout from "./components/admin/AdminLayout";
@@ -49,6 +50,7 @@ function App() {
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
             <Route path="map" element={<AdminMap />} />
+            <Route path="incidents" element={<AdminIncidents />} />
             <Route path="settings" element={<AdminSettings />} />
           </Route>
         </Route>

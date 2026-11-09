@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Circle,
   MapContainer,
@@ -10,7 +10,16 @@ import {
   useMap,
 } from "react-leaflet";
 import L from "leaflet";
-import { Lock, ShieldAlert, Unlock } from "lucide-react";
+import {
+  AlertCircle,
+  BellOff,
+  CheckCircle2,
+  Loader2,
+  Lock,
+  ShieldAlert,
+  Unlock,
+  X,
+} from "lucide-react";
 import { getBikeStatusMeta } from "../../utils/fleetStats";
 import {
   DEFAULT_GEOFENCE,
@@ -34,6 +43,41 @@ const STATUS_COLORS = {
   MAINTENANCE: "#94a3b8",
   GEOFENCE_VIOLATION: "#ef4444",
   TAMPER_ALERT: "#e11d48",
+};
+
+const REMOTE_ACTIONS = [
+  {
+    action: "FORCE_LOCK",
+    label: "Force Lock",
+    icon: Lock,
+    className: "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100",
+  },
+  {
+    action: "FORCE_UNLOCK",
+    label: "Force Unlock",
+    icon: Unlock,
+    className:
+      "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
+  },
+  {
+    action: "ALARM_OFF",
+    label: "Turn Off Alarm",
+    icon: BellOff,
+    className: "border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100",
+  },
+];
+
+const getActionLabel = (action) =>
+  REMOTE_ACTIONS.find((item) => item.action === action)?.label || action;
+
+const getConfirmMessage = (action, bikeId) => {
+  if (action === "FORCE_LOCK") return `Kunci paksa ${bikeId}?`;
+  if (action === "FORCE_UNLOCK") {
+    return `Buka kunci ${bikeId} secara paksa?`;
+  }
+  if (action === "ALARM_OFF") return `Matikan alarm ${bikeId}?`;
+
+  return `Kirim perintah ke ${bikeId}?`;
 };
 
 const BIKE_ICON_SVG = `
@@ -184,13 +228,32 @@ const MapResizeObserver = () => {
   return null;
 };
 
-const MarkerPopup = ({ bike, geofence }) => {
+const MarkerPopup = ({
+  bike,
+  geofence,
+  commandState,
+  onSendCommand,
+  onClearFeedback,
+}) => {
+  const [confirmAction, setConfirmAction] = useState(null);
   const statusMeta = getBikeStatusMeta(bike.status);
   const coordinates = getBikeCoordinates(bike);
   const distanceM = getBikeDistanceFromStation(bike, geofence);
   const geofenceStatus = isBikeOutsideGeofence(bike, geofence);
   const stale = !bike.has_live_location || isTelemetryStale(bike.last_reported_at);
   const anomaly = isImuAnomaly(bike);
+
+  const pendingAction = commandState?.pending || null;
+  const feedback = commandState?.feedback || null;
+  const isPending = Boolean(pendingAction);
+
+  const handleConfirm = async () => {
+    if (!confirmAction || !onSendCommand) return;
+
+    const action = confirmAction;
+    setConfirmAction(null);
+    await onSendCommand({ bikeId: bike.bike_id, action });
+  };
 
   return (
     <div className="min-w-[224px] space-y-2.5">
@@ -286,6 +349,93 @@ const MarkerPopup = ({ bike, geofence }) => {
           radius {formatDistance(geofence.radiusM)}).
         </div>
       )}
+
+      <div
+        className="border-t border-slate-100 pt-2.5"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="mb-1.5 flex items-center justify-between gap-2">
+          <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
+            Kontrol Admin
+          </p>
+          {isPending && (
+            <span className="text-[9px] font-semibold text-brand-600">
+              Mengirim {getActionLabel(pendingAction)}...
+            </span>
+          )}
+        </div>
+
+        <div className="grid grid-cols-3 gap-1.5">
+          {REMOTE_ACTIONS.map(({ action, label, icon: Icon, className }) => (
+            <button
+              key={action}
+              type="button"
+              disabled={isPending}
+              onClick={() => setConfirmAction(action)}
+              title={label}
+              className={`flex flex-col items-center gap-1 rounded-lg border px-1.5 py-2 text-[9px] font-bold leading-tight transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+            >
+              {pendingAction === action ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Icon size={13} />
+              )}
+              <span>{label}</span>
+            </button>
+          ))}
+        </div>
+
+        {confirmAction && (
+          <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[10px] text-amber-800">
+            <p className="font-semibold">
+              {getConfirmMessage(confirmAction, bike.bike_id)}
+            </p>
+            <div className="mt-1.5 flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={handleConfirm}
+                className="rounded-md bg-amber-600 px-2 py-1 text-[9px] font-bold text-white transition-colors hover:bg-amber-700"
+              >
+                Kirim
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmAction(null)}
+                className="rounded-md border border-amber-300 bg-white px-2 py-1 text-[9px] font-bold text-amber-700 transition-colors hover:bg-amber-100"
+              >
+                Batal
+              </button>
+            </div>
+          </div>
+        )}
+
+        {feedback && (
+          <div
+            className={`mt-2 flex items-start gap-1.5 rounded-lg border px-2.5 py-2 text-[10px] ${
+              feedback.tone === "success"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                : "border-rose-200 bg-rose-50 text-rose-700"
+            }`}
+          >
+            {feedback.tone === "success" ? (
+              <CheckCircle2 size={12} className="mt-0.5 shrink-0" />
+            ) : (
+              <AlertCircle size={12} className="mt-0.5 shrink-0" />
+            )}
+            <span className="min-w-0 flex-1">{feedback.message}</span>
+            {onClearFeedback && (
+              <button
+                type="button"
+                onClick={() => onClearFeedback(bike.bike_id)}
+                aria-label="Tutup pesan perintah"
+                className="shrink-0 rounded p-0.5 transition-colors hover:bg-white/70"
+              >
+                <X size={11} />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
@@ -324,6 +474,9 @@ const FleetMap = ({
   selectedBikeId = null,
   focusNonce = 0,
   onSelectBike,
+  onSendCommand,
+  commandStates = {},
+  onClearFeedback,
   heightClass = "h-[420px] sm:h-[520px]",
   className = "",
 }) => {
@@ -428,7 +581,13 @@ const FleetMap = ({
             </Tooltip>
 
             <Popup className="fleet-popup">
-              <MarkerPopup bike={bike} geofence={geofence} />
+              <MarkerPopup
+                bike={bike}
+                geofence={geofence}
+                commandState={commandStates[bike.bike_id]}
+                onSendCommand={onSendCommand}
+                onClearFeedback={onClearFeedback}
+              />
             </Popup>
           </Marker>
         ))}
