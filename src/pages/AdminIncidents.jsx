@@ -25,6 +25,8 @@ const INCIDENT_TYPE_OPTIONS = [
   { value: "ALL", label: "Semua jenis" },
   { value: "TAMPER", label: "Guncangan MPU6050" },
   { value: "GEOFENCE", label: "Pelanggaran Geofence" },
+  { value: "OVERDUE", label: "Waktu Sewa Habis" },
+  { value: "OVERDUE_MOVEMENT", label: "Sewa Habis — Sepeda Bergerak" },
 ];
 
 const COMMAND_STATUS_OPTIONS = [
@@ -158,8 +160,8 @@ const AdminIncidents = () => {
             Insiden Keamanan
           </h2>
           <p className="mt-1 max-w-2xl text-sm leading-relaxed text-slate-500">
-            Feed guncangan MPU6050, pelanggaran geofence, dan audit perintah
-            admin dalam satu halaman.
+            Feed guncangan MPU6050, pelanggaran geofence, pelanggaran waktu
+            sewa (overdue), dan audit perintah admin dalam satu halaman.
           </p>
         </div>
 

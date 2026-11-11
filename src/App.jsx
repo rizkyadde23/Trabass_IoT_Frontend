@@ -4,44 +4,87 @@ import {
   Routes,
   Route,
   Navigate,
+  useLocation,
 } from "react-router-dom";
 import { useRental } from "./context/RentalContext";
 import { useAuth } from "./context/AuthContext";
 
-import Home from "./pages/Home";
-import Scan from "./pages/Scan";
-import Checkout from "./pages/Checkout";
+import UserRegister from "./pages/UserRegister";
+import Payment from "./pages/Payment";
 import ActiveRental from "./pages/ActiveRental";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
+import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminMap from "./pages/AdminMap";
 import AdminSettings from "./pages/AdminSettings";
 import AdminIncidents from "./pages/AdminIncidents";
+import AdminQrGenerator from "./pages/AdminQrGenerator";
+import AdminBikes from "./pages/AdminBikes";
+import AdminBikeDetail from "./pages/AdminBikeDetail";
 import OfflineDetector from "./components/OfflineDetector";
 import MobileLayout from "./components/MobileLayout";
 import AdminLayout from "./components/admin/AdminLayout";
 import {
   AdminRoute,
+  AdminGuestRoute,
   GuestRoute,
   RenterRoute,
 } from "./components/ProtectedRoute";
 
-function App() {
+/**
+ * Halaman Home (/) dihapus dari alur user: alur penyewa dimulai dari
+ * scan QR yang membawa bike_id ke halaman registrasi. Route root kini
+ * hanya mengarahkan pengguna ke halaman yang relevan.
+ */
+const RootRedirect = () => {
   const { activeRental } = useRental();
   const { isAuthenticated, isAdmin } = useAuth();
 
-  const fallbackPath = isAuthenticated ? (isAdmin ? "/admin" : "/") : "/login";
+  if (isAuthenticated) {
+    if (isAdmin) return <Navigate to="/admin" replace />;
+    return (
+      <Navigate to={activeRental ? "/active" : "/register"} replace />
+    );
+  }
+
+  return <Navigate to="/register" replace />;
+};
+
+/**
+ * /checkout & /scan lama dialihkan ke /register dengan bike_id
+ * dipertahankan agar link lama tetap bisa melanjutkan sewa.
+ */
+const CheckoutRedirect = () => {
+  const location = useLocation();
+  const bikeId = new URLSearchParams(location.search).get("bike_id");
+
+  return (
+    <Navigate
+      to={
+        bikeId
+          ? `/register?bike_id=${encodeURIComponent(bikeId)}`
+          : "/register"
+      }
+      replace
+    />
+  );
+};
+
+function App() {
+  const fallbackPath = "/register";
 
   return (
     <Router>
       <OfflineDetector />
       <Routes>
-        {/* Halaman autentikasi memakai shell mobile yang sama dengan PWA. */}
+        {/* Login admin: halaman mandiri, hanya username/email + password. */}
+        <Route element={<AdminGuestRoute />}>
+          <Route path="/admin/login" element={<AdminLogin />} />
+        </Route>
+
+        {/* Registrasi penyewa hasil scan QR (publik, shell mobile PWA). */}
         <Route element={<MobileLayout />}>
           <Route element={<GuestRoute />}>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            <Route path="/register" element={<UserRegister />} />
           </Route>
         </Route>
 
@@ -50,25 +93,30 @@ function App() {
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
             <Route path="map" element={<AdminMap />} />
+            <Route path="bikes" element={<AdminBikes />} />
+            <Route path="bikes/:bikeId" element={<AdminBikeDetail />} />
             <Route path="incidents" element={<AdminIncidents />} />
             <Route path="settings" element={<AdminSettings />} />
+            <Route path="qr-generator" element={<AdminQrGenerator />} />
           </Route>
         </Route>
 
         {/* Halaman penyewa tetap memakai shell mobile PWA. */}
         <Route element={<RenterRoute />}>
           <Route element={<MobileLayout />}>
-            <Route
-              path="/"
-              element={
-                activeRental ? <Navigate to="/active" replace /> : <Home />
-              }
-            />
-            <Route path="/scan" element={<Scan />} />
-            <Route path="/checkout" element={<Checkout />} />
+            <Route path="/payment" element={<Payment />} />
             <Route path="/active" element={<ActiveRental />} />
           </Route>
         </Route>
+
+        {/* Route lama dialihkan agar bookmark/QR lama tetap berfungsi. */}
+        <Route path="/" element={<RootRedirect />} />
+        <Route
+          path="/login"
+          element={<Navigate to="/admin/login" replace />}
+        />
+        <Route path="/scan" element={<CheckoutRedirect />} />
+        <Route path="/checkout" element={<CheckoutRedirect />} />
 
         <Route path="*" element={<Navigate to={fallbackPath} replace />} />
       </Routes>

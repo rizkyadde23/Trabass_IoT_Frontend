@@ -81,7 +81,7 @@ const ActiveRental = () => {
           if (!navigatingHomeRef.current) {
             navigatingHomeRef.current = true;
             clearRentalSession();
-            navigate("/", { replace: true });
+            navigate("/register", { replace: true });
           }
         }
       } catch (error) {
@@ -156,14 +156,14 @@ const ActiveRental = () => {
 
       clearRentalSession();
       setShowFinishModal(false);
-      navigate("/");
+      navigate("/register");
     } catch (error) {
       const httpStatus = error.response?.status;
 
       if (httpStatus === 404) {
         clearRentalSession();
         setShowFinishModal(false);
-        navigate("/");
+        navigate("/register");
         return;
       }
 
@@ -188,10 +188,10 @@ const ActiveRental = () => {
           Silakan pindai QR Code sepeda untuk memulai sewa baru.
         </p>
         <button
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/register")}
           className="py-3 px-6 bg-brand-600 text-white font-semibold rounded-xl shadow-md text-sm"
         >
-          Kembali ke Home
+          Mulai Sewa Baru
         </button>
       </div>
     );

@@ -5,21 +5,18 @@ Trabass-IoT-Frontend/
 │   ├── icon-512.png
 │   └── manifest.json
 ├── src/
-│   ├── assets/
-│   │   └── logo.svg
 │   ├── components/
 │   │   ├── admin/
-│   │   │   ├── AdminLayout.jsx          # Shell dashboard admin (topbar + konten)
-│   │   │   ├── AdminSidebar.jsx         # Sidebar navigasi, menu pengaturan & profil admin
-│   │   │   ├── AnomalyAlertBanner.jsx   # Banner peringatan gerakan MPU6050 saat locked
-│   │   │   ├── CommandHistory.jsx       # Tabel audit perintah remote admin
-│   │   │   ├── FleetMap.jsx             # Peta Leaflet, marker GPS, geofence & kontrol remote
-│   │   │   ├── ImuMonitorPanel.jsx      # Panel monitoring sensor IMU MPU6050
-│   │   │   ├── IncidentFeed.jsx         # Feed insiden tamper & pelanggaran geofence
-│   │   │   └── StatCard.jsx             # Kartu statistik ringkasan armada
-│   │   ├── QRScanner.jsx         # Komponen scanner kamera HTML5-QRCode
+│   │   │   ├── AdminLayout.jsx       # Shell dashboard admin (topbar + konten)
+│   │   │   ├── AdminSidebar.jsx      # Sidebar navigasi, menu pengaturan & profil admin
+│   │   │   ├── AnomalyAlertBanner.jsx # Banner peringatan gerakan MPU6050 saat locked
+│   │   │   ├── BatteryGauge.jsx     # Widget baterai perception layer (0-100%)
+│   │   │   ├── CommandHistory.jsx    # Tabel audit perintah remote admin
+│   │   │   ├── FleetMap.jsx          # Peta Leaflet, marker GPS, geofence, popup baterai & kontrol remote
+│   │   │   ├── ImuMonitorPanel.jsx   # Panel monitoring sensor IMU MPU6050
+│   │   │   ├── IncidentFeed.jsx      # Feed insiden tamper & pelanggaran geofence
+│   │   │   └── StatCard.jsx          # Kartu statistik ringkasan armada
 │   │   ├── CountdownTimer.jsx    # Live timer hitung mundur waktu sewa
-│   │   ├── Header.jsx            # Navigasi & status koneksi
 │   │   ├── MobileLayout.jsx      # Shell PWA penyewa (max-w-md)
 │   │   ├── ModalExtend.jsx       # Pop-up opsi perpanjangan waktu sewa
 │   │   ├── OfflineDetector.jsx   # Banner status koneksi offline
@@ -28,21 +25,23 @@ Trabass-IoT-Frontend/
 │   │   ├── AuthContext.jsx       # State autentikasi, user & role
 │   │   └── RentalContext.jsx     # State management global sesi sewa
 │   ├── hooks/
+│   │   ├── useAdminBikeDetail.js # Polling detail sepeda + riwayat telemetri (halaman /admin/bikes/:id)
 │   │   ├── useAdminBikes.js      # Polling data armada, geofence & status sinkron
 │   │   ├── useAdminCommandLogs.js # Polling audit perintah admin
 │   │   ├── useAdminIncidents.js  # Polling feed insiden dengan cursor & filter
 │   │   └── useBikeCommands.js    # Kirim perintah remote & state pending per sepeda
 │   ├── pages/
-│   │   ├── AdminDashboard.jsx    # Statistik, peta ringkas, tabel, panel IMU & feed insiden
-│   │   ├── AdminMap.jsx          # Halaman peta armada penuh + kontrol remote marker
-│   │   ├── AdminIncidents.jsx    # Halaman insiden keamanan & riwayat perintah
-│   │   ├── AdminSettings.jsx     # Pengaturan pangkalan, geofence & pricing
-│   │   ├── Home.jsx              # Halaman utama & input manual/scan QR
-│   │   ├── Scan.jsx              # Halaman kamera pemindai QR Code
-│   │   ├── Checkout.jsx          # Halaman pilih paket durasi & pembayaran
 │   │   ├── ActiveRental.jsx      # Dashboard penyewa saat sepeda terbuka
-│   │   ├── Login.jsx             # Halaman login (redirect sesuai role)
-│   │   └── Register.jsx          # Halaman registrasi penyewa
+│   │   ├── AdminBikeDetail.jsx   # Detail monitoring per sepeda: kartu perception layer, kontrol remote & riwayat telemetri
+│   │   ├── AdminBikes.jsx        # Kelola armada: tambah, ubah & hapus sepeda
+│   │   ├── AdminDashboard.jsx    # Statistik, peta ringkas, tabel armada (baris klikabel) & feed insiden
+│   │   ├── AdminIncidents.jsx    # Halaman insiden keamanan & riwayat perintah
+│   │   ├── AdminLogin.jsx        # Login admin (username/email + password)
+│   │   ├── AdminMap.jsx          # Halaman peta armada penuh + kontrol remote marker
+│   │   ├── AdminQrGenerator.jsx  # Generator & unduh QR code per sepeda
+│   │   ├── AdminSettings.jsx     # Pengaturan pangkalan, geofence & pricing
+│   │   ├── Payment.jsx           # Checkout: pilih paket durasi & pembayaran Midtrans Snap
+│   │   └── UserRegister.jsx      # Registrasi penyewa hasil scan QR (nama + nomor WA)
 │   ├── services/
 │   │   ├── api.js                # Service Axios ke Backend Node.js
 │   │   └── midtransService.js    # Wrapper pemanggilan Midtrans Snap SDK

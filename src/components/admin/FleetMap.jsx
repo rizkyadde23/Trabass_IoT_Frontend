@@ -34,6 +34,7 @@ import {
   isImuAnomaly,
   isTelemetryStale,
 } from "../../utils/fleetTelemetry";
+import BatteryGauge from "./BatteryGauge";
 
 const STATUS_COLORS = {
   AVAILABLE: "#22c55e",
@@ -315,6 +316,14 @@ const MarkerPopup = ({
           >
             {formatDistance(distanceM)}
           </p>
+        </div>
+        <div className="col-span-2 rounded-lg bg-slate-50 px-2 py-1.5">
+          <p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">
+            Baterai
+          </p>
+          <div className="mt-0.5">
+            <BatteryGauge percent={bike.battery_percent} />
+          </div>
         </div>
       </div>
 

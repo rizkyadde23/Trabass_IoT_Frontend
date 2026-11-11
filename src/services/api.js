@@ -30,6 +30,26 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+/**
+ * Redirect saat sesi berakhir (401):
+ * - Halaman admin kembali ke /admin/login.
+ * - Alur penyewa kembali ke /register dengan bike_id dipertahankan
+ *   agar user cukup mengisi ulang nama + nomor WA.
+ */
+const redirectToLogin = () => {
+  if (window.location.pathname.startsWith("/admin")) {
+    window.location.assign("/admin/login");
+    return;
+  }
+
+  const bikeId = new URLSearchParams(window.location.search).get("bike_id");
+  window.location.assign(
+    bikeId
+      ? `/register?bike_id=${encodeURIComponent(bikeId)}`
+      : "/register",
+  );
+};
+
 // Tangani token kedaluwarsa / tidak valid secara global.
 api.interceptors.response.use(
   (response) => response,
@@ -37,7 +57,8 @@ api.interceptors.response.use(
     const status = error.response?.status;
     const url = error.config?.url || "";
     const isLoginAttempt =
-      url.startsWith("/auth/login") || url.startsWith("/auth/register");
+      url.startsWith("/auth/login") ||
+      url.startsWith("/auth/quick-register");
 
     if (status === 401 && !isLoginAttempt) {
       // Sesi dianggap berakhir: bersihkan token & data user agar guard route
@@ -51,8 +72,11 @@ api.interceptors.response.use(
 
       window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
 
-      if (!window.location.pathname.startsWith("/login")) {
-        window.location.assign("/login");
+      if (
+        !window.location.pathname.startsWith("/admin/login") &&
+        !window.location.pathname.startsWith("/register")
+      ) {
+        redirectToLogin();
       }
     }
 
@@ -63,28 +87,49 @@ api.interceptors.response.use(
 // ---------------------------------------------------------------------------
 // Autentikasi
 // ---------------------------------------------------------------------------
-export const registerUser = async ({
+/**
+ * Registrasi ringan penyewa hasil scan QR sepeda. Identitas penyewa
+ * adalah Nomor WA; backend menerbitkan token agar bisa langsung
+ * melanjutkan ke halaman pembayaran.
+ */
+export const quickRegisterUser = async ({
   name,
   phone_number,
-  email,
-  password,
+  bike_id,
 }) => {
-  const response = await api.post("/auth/register", {
+  const response = await api.post("/auth/quick-register", {
     name,
     phone_number,
-    email,
+    bike_id,
+  });
+  return response.data;
+};
+
+/**
+ * Login admin dengan username atau email + password.
+ */
+export const adminLogin = async ({ identifier, password }) => {
+  const response = await api.post("/auth/login", {
+    identifier,
     password,
   });
   return response.data;
 };
 
-export const loginUser = async ({ email, password }) => {
-  const response = await api.post("/auth/login", { email, password });
+export const getCurrentUser = async () => {
+  const response = await api.get("/auth/me");
   return response.data;
 };
 
-export const getCurrentUser = async () => {
-  const response = await api.get("/auth/me");
+/**
+ * Validasi dini sepeda hasil scan QR (publik, tanpa login).
+ * Dipakai halaman registrasi untuk menolak sepeda RENTED/MAINTENANCE
+ * sebelum user mengisi form.
+ */
+export const getBikeAvailability = async (bikeId) => {
+  const response = await api.get(
+    `/bikes/${encodeURIComponent(bikeId)}/availability`,
+  );
   return response.data;
 };
 
@@ -165,6 +210,83 @@ export const finishRentSession = async ({ bike_id }) => {
  */
 export const getAdminBikes = async () => {
   const response = await api.get("/admin/bikes");
+  return response.data;
+};
+
+/**
+ * Menambahkan sepeda baru ke armada lewat halaman Kelola Armada.
+ * Endpoint admin-only.
+ */
+export const createAdminBike = async ({
+  bike_id,
+  name,
+  status,
+  lock_state,
+  last_latitude,
+  last_longitude,
+}) => {
+  const response = await api.post("/admin/bikes", {
+    bike_id,
+    name,
+    status,
+    lock_state,
+    last_latitude,
+    last_longitude,
+  });
+  return response.data;
+};
+
+/**
+ * Mengubah data sepeda (nama, status, status kunci).
+ * Endpoint admin-only.
+ */
+export const updateAdminBike = async ({
+  bike_id,
+  name,
+  status,
+  lock_state,
+}) => {
+  const response = await api.put(
+    `/admin/bikes/${encodeURIComponent(bike_id)}`,
+    {
+      ...(name !== undefined ? { name } : {}),
+      ...(status !== undefined ? { status } : {}),
+      ...(lock_state !== undefined ? { lock_state } : {}),
+    },
+  );
+  return response.data;
+};
+
+/**
+ * Menghapus sepeda beserta riwayatnya (sewa, telemetri, insiden).
+ * Endpoint admin-only.
+ */
+export const deleteAdminBike = async ({ bike_id }) => {
+  const response = await api.delete(
+    `/admin/bikes/${encodeURIComponent(bike_id)}`,
+  );
+  return response.data;
+};
+
+/**
+ * Mengambil detail satu sepeda (data live Redis + MySQL) untuk
+ * halaman monitoring per sepeda tingkat lanjut.
+ */
+export const getAdminBikeDetail = async (bikeId) => {
+  const response = await api.get(
+    `/admin/bikes/${encodeURIComponent(bikeId)}`,
+  );
+  return response.data;
+};
+
+/**
+ * Mengambil riwayat telemetri terbaru satu sepeda dari perception layer.
+ */
+export const getAdminBikeTelemetry = async (bikeId, { limit = 50 } = {}) => {
+  const response = await api.get(
+    `/admin/bikes/${encodeURIComponent(bikeId)}/telemetry`,
+    { params: { limit } },
+  );
   return response.data;
 };
 

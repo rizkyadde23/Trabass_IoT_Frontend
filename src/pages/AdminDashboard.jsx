@@ -1,9 +1,11 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Activity,
   AlertCircle,
+  BatteryLow,
   Bike,
+  ChevronRight,
   ExternalLink,
   KeyRound,
   Lock,
@@ -27,6 +29,7 @@ import useAdminIncidents from "../hooks/useAdminIncidents";
 import useBikeCommands from "../hooks/useBikeCommands";
 import StatCard from "../components/admin/StatCard";
 import FleetMap from "../components/admin/FleetMap";
+import BatteryGauge from "../components/admin/BatteryGauge";
 import ImuMonitorPanel from "../components/admin/ImuMonitorPanel";
 import AnomalyAlertBanner from "../components/admin/AnomalyAlertBanner";
 import IncidentFeed from "../components/admin/IncidentFeed";
@@ -73,6 +76,8 @@ const IMU_DOT_TONES = {
 };
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
+
   const {
     bikes,
     geofence,
@@ -109,8 +114,15 @@ const AdminDashboard = () => {
     setFocusNonce((current) => current + 1);
   };
 
+  const handleOpenBikeDetail = (bikeId) => {
+    navigate(`/admin/bikes/${encodeURIComponent(bikeId)}`);
+  };
+
   const stats = computeFleetStats(bikes);
   const anomalies = bikes.filter(isImuAnomaly);
+  const lowBatteryCount = bikes.filter(
+    (bike) => bike.battery_low === true,
+  ).length;
   const refreshSeconds = Math.round(refreshInterval / 1000);
 
   const distribution = [
@@ -170,8 +182,8 @@ const AdminDashboard = () => {
             Monitoring Armada
           </h2>
           <p className="mt-1 max-w-2xl text-sm leading-relaxed text-slate-500">
-            Pantau posisi GPS NEO-6M, status kunci, dan gerakan MPU6050 dari
-            satu peta interaktif.
+            Pantau posisi GPS NEO-6M, status kunci, baterai, dan gerakan
+            MPU6050 dari satu peta interaktif.
           </p>
         </div>
 
@@ -233,7 +245,7 @@ const AdminDashboard = () => {
         onSelectBike={handleSelectBike}
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard
           title="Total Sepeda"
           value={stats.total}
@@ -264,6 +276,14 @@ const AdminDashboard = () => {
           helper="Unit perawatan dan indikasi tamper MPU6050."
           icon={Wrench}
           tone="red"
+          loading={initialLoading}
+        />
+        <StatCard
+          title="Baterai Rendah"
+          value={lowBatteryCount}
+          helper="Unit di bawah ambang baterai perception layer."
+          icon={BatteryLow}
+          tone={lowBatteryCount > 0 ? "red" : "brand"}
           loading={initialLoading}
         />
       </div>
@@ -345,7 +365,7 @@ const AdminDashboard = () => {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[920px] text-left">
+            <table className="w-full min-w-[1000px] text-left">
               <thead>
                 <tr className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                   <th className="px-5 py-3">ID Sepeda</th>
@@ -353,6 +373,7 @@ const AdminDashboard = () => {
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Kunci</th>
                   <th className="px-4 py-3">IMU</th>
+                  <th className="px-4 py-3">Baterai</th>
                   <th className="px-4 py-3">Koordinat Terakhir</th>
                   <th className="px-4 py-3">Update</th>
                 </tr>
@@ -362,7 +383,7 @@ const AdminDashboard = () => {
                 {initialLoading ? (
                   Array.from({ length: 5 }).map((_, index) => (
                     <tr key={`skeleton-${index}`}>
-                      {Array.from({ length: 7 }).map((__, cellIndex) => (
+                      {Array.from({ length: 8 }).map((__, cellIndex) => (
                         <td
                           key={`skeleton-cell-${cellIndex}`}
                           className="px-4 py-4"
@@ -374,7 +395,7 @@ const AdminDashboard = () => {
                   ))
                 ) : bikes.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-5 py-12 text-center">
+                    <td colSpan={8} className="px-5 py-12 text-center">
                       <Bike
                         size={34}
                         className="mx-auto mb-3 text-slate-300"
@@ -383,8 +404,7 @@ const AdminDashboard = () => {
                         Belum ada data armada
                       </p>
                       <p className="mt-1 text-xs text-slate-500">
-                        Pastikan backend, database, dan koneksi API berjalan
-                        normal.
+                        Tambahkan sepeda pertama lewat menu Kelola Armada.
                       </p>
                     </td>
                   </tr>
@@ -397,15 +417,21 @@ const AdminDashboard = () => {
                     return (
                       <tr
                         key={bike.bike_id}
-                        className={`transition-colors ${
+                        onClick={() => handleOpenBikeDetail(bike.bike_id)}
+                        title={`Buka detail monitoring ${bike.bike_id}`}
+                        className={`cursor-pointer transition-colors ${
                           anomaly
                             ? "bg-rose-50/70 hover:bg-rose-50"
                             : "hover:bg-slate-50/80"
                         }`}
                       >
                         <td className="px-5 py-3.5">
-                          <span className="font-mono text-xs font-bold text-slate-800">
+                          <span className="flex items-center gap-1 font-mono text-xs font-bold text-slate-800">
                             {bike.bike_id}
+                            <ChevronRight
+                              size={14}
+                              className="text-slate-300 transition-colors"
+                            />
                           </span>
                         </td>
                         <td className="px-4 py-3.5">
@@ -461,6 +487,14 @@ const AdminDashboard = () => {
                                 : "Belum ada data live"}
                             </span>
                           </div>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <BatteryGauge percent={bike.battery_percent} />
+                          {bike.battery_low === true && (
+                            <span className="mt-1 inline-flex rounded-full border border-red-200 bg-red-50 px-1.5 py-0.5 text-[9px] font-bold text-red-700">
+                              Rendah
+                            </span>
+                          )}
                         </td>
                         <td className="px-4 py-3.5">
                           <span className="font-mono text-[11px] text-slate-600">

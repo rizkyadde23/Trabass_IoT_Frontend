@@ -5,10 +5,12 @@ import {
   AlertCircle,
   CheckCircle2,
   ChevronRight,
+  Clock,
   MapPin,
   Radio,
   RefreshCw,
   ShieldAlert,
+  TimerOff,
 } from "lucide-react";
 import { formatRelativeTime } from "../../utils/fleetTelemetry";
 
@@ -24,6 +26,18 @@ const TYPE_META = {
     icon: MapPin,
     iconClass: "bg-amber-100 text-amber-600",
     borderClass: "border-amber-100",
+  },
+  OVERDUE: {
+    label: "Waktu Sewa Habis",
+    icon: Clock,
+    iconClass: "bg-red-100 text-red-600",
+    borderClass: "border-red-100",
+  },
+  OVERDUE_MOVEMENT: {
+    label: "Sewa Habis — Sepeda Bergerak",
+    icon: TimerOff,
+    iconClass: "bg-orange-100 text-orange-600",
+    borderClass: "border-orange-100",
   },
 };
 
@@ -82,6 +96,19 @@ const IncidentRow = ({ incident, onSelectBike, onMarkSeen }) => {
         <span className="mt-1 block truncate text-[11px] font-semibold text-slate-700">
           {incident.bike_name || "Unit tanpa nama"}
         </span>
+        {incident.renter_name && (
+          <span className="mt-0.5 flex flex-wrap items-center gap-x-1 text-[10px] text-slate-500">
+            <span className="font-semibold text-slate-600">Penyewa:</span>
+            <span className="font-semibold">
+              {incident.renter_name}
+            </span>
+            {incident.renter_phone && (
+              <span className="text-slate-400">
+                ({incident.renter_phone})
+              </span>
+            )}
+          </span>
+        )}
         <span className="mt-0.5 block text-[11px] leading-relaxed text-slate-500">
           {incident.message}
         </span>
@@ -143,7 +170,8 @@ const IncidentFeed = ({
             </span>
           </h3>
           <p className="mt-0.5 text-[11px] text-slate-500">
-            Riwayat guncangan MPU6050 dan pelanggaran geofence.
+            Riwayat guncangan MPU6050, pelanggaran geofence, dan pelanggaran
+            waktu sewa beserta penyewa terkait.
           </p>
         </div>
 
@@ -210,8 +238,8 @@ const IncidentFeed = ({
             Belum ada insiden keamanan
           </p>
           <p className="mt-1 text-[11px] text-slate-500">
-            Feed akan terisi otomatis saat tamper atau pelanggaran geofence
-            terdeteksi.
+            Feed akan terisi otomatis saat tamper, pelanggaran geofence,
+            atau pelanggaran waktu sewa terdeteksi.
           </p>
         </div>
       ) : (

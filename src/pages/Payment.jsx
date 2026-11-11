@@ -5,7 +5,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { Navigate, useSearchParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   Clock,
@@ -51,7 +51,13 @@ const formatRupiah = (value) =>
 
 const ACTIVE_STATUSES = ["ACTIVE", "WARNING_SENT"];
 
-const Checkout = () => {
+/**
+ * Halaman pembayaran sewa (/payment?bike_id=...).
+ * Hanya bisa diakses setelah registrasi ringan dengan bike_id valid.
+ * Alur Midtrans Snap dipertahankan: buat transaksi -> bayar -> polling
+ * konfirmasi -> sesi aktif.
+ */
+const Payment = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const {
@@ -62,8 +68,7 @@ const Checkout = () => {
   } = useRental();
   const { user } = useAuth();
 
-  const bikeId =
-    (searchParams.get("bike_id") || "").trim().toUpperCase() || "BK-001";
+  const bikeId = (searchParams.get("bike_id") || "").trim().toUpperCase();
 
   const [pricing, setPricing] = useState(null);
   const [pricingLoading, setPricingLoading] = useState(true);
@@ -263,7 +268,7 @@ const Checkout = () => {
   });
 
   const handlePayNow = async () => {
-    if (loading || verifying || !pricing) return;
+    if (loading || verifying || !pricing || !bikeId) return;
 
     setLoading(true);
     setErrorMessage("");
@@ -335,20 +340,31 @@ const Checkout = () => {
     setStatusMessage("");
   };
 
+  // Pembayaran wajib tahu sepeda mana yang disewa. Tanpa bike_id, user
+  // dikembalikan ke alur registrasi (bukan fallback ke sepeda default).
+  if (!bikeId) {
+    return <Navigate to="/register" replace />;
+  }
+
   return (
     <div className="flex flex-col min-h-screen p-5 bg-slate-50 justify-between">
       <div>
         {/* Header Navigation */}
         <div className="flex items-center space-x-3 my-2">
           <button
-            onClick={() => navigate("/")}
+            onClick={() =>
+              navigate(
+                `/register?bike_id=${encodeURIComponent(bikeId)}`,
+              )
+            }
             className="p-2.5 bg-white rounded-xl text-slate-600 hover:text-slate-900 shadow-sm border border-slate-200 transition-all active:scale-95"
+            aria-label="Kembali ke halaman registrasi"
           >
             <ArrowLeft size={20} />
           </button>
           <div>
             <h1 className="text-base font-bold text-slate-800">
-              Checkout Sewa
+              Pembayaran Sewa
             </h1>
             <p className="text-xs text-slate-500">
               ID Sepeda:{" "}
@@ -568,7 +584,13 @@ const Checkout = () => {
               <div className="flex justify-between text-xs text-slate-600">
                 <span>Penyewa</span>
                 <span className="font-semibold text-slate-800">
-                  {user.name}
+                  {user?.name || "-"}
+                </span>
+              </div>
+              <div className="flex justify-between text-xs text-slate-600">
+                <span>Nomor WA</span>
+                <span className="font-semibold text-slate-800">
+                  {user?.phone_number || "-"}
                 </span>
               </div>
               <div className="flex justify-between text-xs text-slate-600">
@@ -617,4 +639,4 @@ const Checkout = () => {
   );
 };
 
-export default Checkout;
+export default Payment;

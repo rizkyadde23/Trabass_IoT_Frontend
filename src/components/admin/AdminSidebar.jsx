@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   LogOut,
   Map,
+  QrCode,
   Settings,
   ShieldAlert,
   X,
@@ -26,9 +27,21 @@ const MAIN_NAV = [
     end: true,
   },
   {
+    // Tanpa `end` agar menu tetap aktif di halaman detail sepeda.
+    label: "Kelola Armada",
+    to: "/admin/bikes",
+    icon: Bike,
+  },
+  {
     label: "Insiden Keamanan",
     to: "/admin/incidents",
     icon: ShieldAlert,
+    end: true,
+  },
+  {
+    label: "Generator QR",
+    to: "/admin/qr-generator",
+    icon: QrCode,
     end: true,
   },
   {
@@ -50,7 +63,7 @@ const AdminSidebar = ({ isOpen, onClose }) => {
     clearRentalSession();
     clearPendingOrder();
     logout();
-    navigate("/login", { replace: true });
+    navigate("/admin/login", { replace: true });
   };
 
   return (
@@ -127,7 +140,7 @@ const AdminSidebar = ({ isOpen, onClose }) => {
                 {user?.name || "Admin"}
               </p>
               <p className="truncate text-[11px] text-slate-400">
-                {user?.email || "Administrator"}
+                {user?.username || user?.email || "Administrator"}
               </p>
             </div>
           </div>
