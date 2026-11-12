@@ -14,12 +14,22 @@ const TOKEN_STORAGE_KEY = "trabass_auth_token";
 const USER_STORAGE_KEY = "trabass_auth_user";
 const AUTH_EXPIRED_EVENT = "trabass:auth-expired";
 
-// Sesi autentikasi memakai sessionStorage: token hilang otomatis ketika
-// browser/tab ditutup, sehingga pengguna harus login kembali.
-const readStoredToken = () => sessionStorage.getItem(TOKEN_STORAGE_KEY);
+// Sesi penyewa disimpan di localStorage agar tetap login setelah tab/browser
+// ditutup — alur sewa harus bisa dilanjutkan/dikembalikan kapan saja.
+// Sesi admin tetap di sessionStorage: perangkat dashboard bisa dipakai
+// bergantian, sehingga sesi admin berakhir saat browser ditutup.
+const resolveStorage = (role) =>
+  role === "admin" ? sessionStorage : localStorage;
+
+const readStoredToken = () =>
+  localStorage.getItem(TOKEN_STORAGE_KEY) ||
+  sessionStorage.getItem(TOKEN_STORAGE_KEY);
 
 const readStoredUser = () => {
-  const savedUser = sessionStorage.getItem(USER_STORAGE_KEY);
+  const savedUser =
+    localStorage.getItem(USER_STORAGE_KEY) ||
+    sessionStorage.getItem(USER_STORAGE_KEY);
+
   if (!savedUser) return null;
 
   try {
@@ -27,6 +37,31 @@ const readStoredUser = () => {
   } catch {
     return null;
   }
+};
+
+/**
+ * Menulis sesi ke storage sesuai role, sekaligus membersihkan storage lain
+ * agar tidak ada sesi ganda yang tertinggal (mis. sesi admin lama).
+ */
+const persistSession = (nextToken, nextUser) => {
+  const target = resolveStorage(nextUser?.role);
+  const other = target === localStorage ? sessionStorage : localStorage;
+
+  if (nextToken) target.setItem(TOKEN_STORAGE_KEY, nextToken);
+  else target.removeItem(TOKEN_STORAGE_KEY);
+
+  if (nextUser) target.setItem(USER_STORAGE_KEY, JSON.stringify(nextUser));
+  else target.removeItem(USER_STORAGE_KEY);
+
+  other.removeItem(TOKEN_STORAGE_KEY);
+  other.removeItem(USER_STORAGE_KEY);
+};
+
+const clearSession = () => {
+  sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+  sessionStorage.removeItem(USER_STORAGE_KEY);
+  localStorage.removeItem(TOKEN_STORAGE_KEY);
+  localStorage.removeItem(USER_STORAGE_KEY);
 };
 
 export const AuthProvider = ({ children }) => {
@@ -39,30 +74,13 @@ export const AuthProvider = ({ children }) => {
   const isAuthenticated = Boolean(token && user?.user_id);
   const isAdmin = Boolean(isAuthenticated && user?.role === "admin");
 
-  // Bersihkan token lama dari localStorage (versi sebelumnya) agar tidak
-  // membuat sesi "hantu" yang bertahan setelah browser ditutup.
+  // Sinkronkan sesi ke storage yang tepat. Efek ini sekaligus memindahkan
+  // sesi admin lama (yang mungkin masih tersimpan di localStorage).
   useEffect(() => {
-    localStorage.removeItem(TOKEN_STORAGE_KEY);
-    localStorage.removeItem(USER_STORAGE_KEY);
-  }, []);
-
-  // Sinkronkan token ke sessionStorage.
-  useEffect(() => {
-    if (token) {
-      sessionStorage.setItem(TOKEN_STORAGE_KEY, token);
-    } else {
-      sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+    if (token && user?.user_id) {
+      persistSession(token, user);
     }
-  }, [token]);
-
-  // Sinkronkan data user ke sessionStorage.
-  useEffect(() => {
-    if (user) {
-      sessionStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
-    } else {
-      sessionStorage.removeItem(USER_STORAGE_KEY);
-    }
-  }, [user]);
+  }, [token, user]);
 
   // Validasi token tersimpan saat aplikasi dibuka. Jika token sudah
   // kedaluwarsa/tidak valid, sesi dibersihkan dan guard route akan
@@ -92,6 +110,7 @@ export const AuthProvider = ({ children }) => {
         const status = error?.response?.status;
 
         if (status === 401 || status === 403 || status === 404) {
+          clearSession();
           setToken(null);
           setUser(null);
         }
@@ -108,22 +127,13 @@ export const AuthProvider = ({ children }) => {
   const login = useCallback(({ token: nextToken, user: nextUser }) => {
     // Tulis sinkron agar request pertama setelah redirect login sudah
     // membawa Authorization header.
-    if (nextToken) {
-      sessionStorage.setItem(TOKEN_STORAGE_KEY, nextToken);
-    }
-
-    if (nextUser) {
-      sessionStorage.setItem(USER_STORAGE_KEY, JSON.stringify(nextUser));
-    }
-
+    persistSession(nextToken, nextUser);
     setToken(nextToken);
     setUser(nextUser);
   }, []);
 
   const logout = useCallback(() => {
-    sessionStorage.removeItem(TOKEN_STORAGE_KEY);
-    sessionStorage.removeItem(USER_STORAGE_KEY);
-
+    clearSession();
     setToken(null);
     setUser(null);
   }, []);

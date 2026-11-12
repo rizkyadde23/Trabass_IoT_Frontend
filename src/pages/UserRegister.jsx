@@ -12,13 +12,21 @@ import {
   UserPlus,
 } from "lucide-react";
 import {
+  getActiveRental,
   getApiErrorMessage,
   getBikeAvailability,
   quickRegisterUser,
 } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { useRental } from "../context/RentalContext";
 
 const PHONE_REGEX = /^08\d{8,13}$/;
+
+// Sepeda berstatus RENTED/OVERDUE/RESERVED tetap menampilkan form: pemilik
+// sesi (nomor WA yang sama) dapat memulihkan sesinya. Pengguna lain yang
+// mencoba melanjutkan akan ditolak backend saat membuat transaksi karena
+// sepeda tidak tersedia untuk sewa baru.
+const RESUME_STATUSES = ["RENTED", "OVERDUE", "RESERVED"];
 
 const normalizePhoneNumber = (value) => {
   let phone = String(value || "").replace(/[\s\-().]/g, "");
@@ -43,6 +51,7 @@ const UserRegister = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { setRentalFromBackend, beginRentalHydration } = useRental();
 
   const bikeId = (searchParams.get("bike_id") || "")
     .trim()
@@ -121,8 +130,36 @@ const UserRegister = () => {
         throw new Error("Respons registrasi dari server tidak valid.");
       }
 
-      // Registrasi berhasil -> sesi login aktif -> langsung ke pembayaran.
+      // Registrasi berhasil -> sesi login aktif. Tahan redirect route
+      // sampai sesi sewa diperiksa agar penyewa lama tidak sempat
+      // diarahkan ke /payment.
+      beginRentalHydration();
       login({ token: data.token, user: data.user });
+
+      // Nomor WA yang ternyata masih punya sesi berjalan dipulihkan ke
+      // /active (extend / pengembalian). Jika sewa awal belum dibayar,
+      // lanjutkan /payment dengan sepeda yang sama.
+      try {
+        const activeResult = await getActiveRental();
+        const activeData = activeResult?.data || {};
+
+        if (activeData.active_rental) {
+          setRentalFromBackend(activeData.active_rental);
+          navigate("/active", { replace: true });
+          return;
+        }
+
+        if (activeData.pending_payment?.bike_id) {
+          navigate(
+            `/payment?bike_id=${encodeURIComponent(activeData.pending_payment.bike_id)}`,
+            { replace: true },
+          );
+          return;
+        }
+      } catch {
+        // Gagal memeriksa sesi: lanjutkan alur pembayaran normal.
+      }
+
       navigate(`/payment?bike_id=${encodeURIComponent(bikeId)}`, {
         replace: true,
       });
@@ -164,8 +201,16 @@ const UserRegister = () => {
     );
   }
 
+  const canResume =
+    bikeInfo !== null &&
+    RESUME_STATUSES.includes(bikeInfo.bike_status) &&
+    bikeInfo.available !== true;
+
+  // Blokir keras hanya untuk sepeda yang tidak bisa dipakai sama sekali
+  // (perawatan, pelanggaran area, peringatan keamanan). RENTED/OVERDUE/
+  // RESERVED tetap menampilkan form agar pemilik sesi dapat melanjutkan.
   const bikeUnavailable =
-    bikeInfo !== null && bikeInfo.available !== true;
+    bikeInfo !== null && bikeInfo.available !== true && !canResume;
 
   return (
     <div className="flex min-h-screen flex-col justify-between bg-slate-50">
@@ -191,11 +236,12 @@ const UserRegister = () => {
             <UserPlus size={30} />
           </div>
           <h2 className="mb-1 text-lg font-bold text-slate-800">
-            Daftar & Sewa Sepeda
+            {canResume ? "Pulihkan Sesi Sewa" : "Daftar & Sewa Sepeda"}
           </h2>
           <p className="mb-5 text-xs leading-relaxed text-slate-500">
-            Isi data diri singkat. Nomor WA dipakai untuk data penyewaan dan
-            notifikasi selama sesi berlangsung — tanpa perlu password.
+            {canResume
+              ? "Masukkan identitas yang sama seperti saat memulai sewa. Sistem akan mengenali sesi Anda dan membuka halaman sewa aktif."
+              : "Isi data diri singkat. Nomor WA dipakai untuk data penyewaan dan notifikasi selama sesi berlangsung — tanpa perlu password."}
           </p>
 
           {/* Validasi sepeda hasil scan */}
@@ -230,6 +276,22 @@ const UserRegister = () => {
                     Status: {bikeInfo.bike_status_label || bikeInfo.bike_status}
                     . Silakan pilih sepeda lain atau hubungi pengelola
                     pangkalan.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : canResume ? (
+            <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-700">
+              <div className="flex items-start space-x-2.5">
+                <AlertCircle size={18} className="mt-0.5 shrink-0" />
+                <div className="leading-relaxed">
+                  <p className="font-bold">
+                    Sepeda {bikeId} masih tercatat dalam sesi sewa.
+                  </p>
+                  <p className="mt-1">
+                    Isi nama dan nomor WA yang dipakai saat menyewa untuk
+                    melanjutkan sesi, memperpanjang waktu, atau mengembalikan
+                    sepeda.
                   </p>
                 </div>
               </div>
@@ -327,8 +389,12 @@ const UserRegister = () => {
                 )}
                 <span>
                   {loading
-                    ? "Memproses Registrasi..."
-                    : "Daftar & Lanjut ke Pembayaran"}
+                    ? canResume
+                      ? "Memulihkan Sesi Sewa..."
+                      : "Memproses Registrasi..."
+                    : canResume
+                      ? "Lanjutkan Sesi Sewa"
+                      : "Daftar & Lanjut ke Pembayaran"}
                 </span>
               </button>
             </form>

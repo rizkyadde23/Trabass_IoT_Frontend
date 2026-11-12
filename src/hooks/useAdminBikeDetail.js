@@ -38,6 +38,8 @@ export const useAdminBikeDetail = ({
   const refreshInterval = resolveRefreshInterval(intervalMs);
 
   const [bike, setBike] = useState(null);
+  const [activeRental, setActiveRental] = useState(null);
+  const [pendingPayment, setPendingPayment] = useState(null);
   const [geofence, setGeofence] = useState(DEFAULT_GEOFENCE);
   const [telemetry, setTelemetry] = useState([]);
   const [telemetryTotal, setTelemetryTotal] = useState(0);
@@ -62,6 +64,8 @@ export const useAdminBikeDetail = ({
   // agar skeleton loading dan pesan error tidak bocor antar sepeda.
   useEffect(() => {
     setBike(null);
+    setActiveRental(null);
+    setPendingPayment(null);
     setGeofence(DEFAULT_GEOFENCE);
     setTelemetry([]);
     setTelemetryTotal(0);
@@ -96,6 +100,8 @@ export const useAdminBikeDetail = ({
         if (!mountedRef.current) return;
 
         setBike(detail.bike);
+        setActiveRental(detail.active_rental || null);
+        setPendingPayment(detail.pending_payment || null);
         setGeofence(normalizeGeofence(detail.geofence));
         setTelemetry(telemetryPayload?.data?.logs || []);
         setTelemetryTotal(telemetryPayload?.data?.total || 0);
@@ -165,6 +171,8 @@ export const useAdminBikeDetail = ({
 
   return {
     bike,
+    activeRental,
+    pendingPayment,
     geofence,
     telemetry,
     telemetryTotal,

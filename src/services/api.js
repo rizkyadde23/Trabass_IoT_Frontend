@@ -19,9 +19,14 @@ const api = axios.create({
 });
 
 // Sisipkan token JWT ke setiap request yang membutuhkan autentikasi.
-// Token disimpan di sessionStorage sehingga sesi berakhir saat browser ditutup.
+// Sesi penyewa tersimpan di localStorage (bertahan setelah browser ditutup),
+// sesi admin di sessionStorage — keduanya dibaca di sini.
+const readStoredToken = () =>
+  localStorage.getItem(TOKEN_STORAGE_KEY) ||
+  sessionStorage.getItem(TOKEN_STORAGE_KEY);
+
 api.interceptors.request.use((config) => {
-  const token = sessionStorage.getItem(TOKEN_STORAGE_KEY);
+  const token = readStoredToken();
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -194,6 +199,16 @@ export const getRentStatus = async (orderId) => {
 };
 
 /**
+ * Memulihkan sesi sewa milik user yang sedang login.
+ * Dipakai saat tab/browser dibuka kembali agar halaman /active tetap
+ * dapat diakses untuk memperpanjang atau mengembalikan sepeda.
+ */
+export const getActiveRental = async () => {
+  const response = await api.get("/rent/active");
+  return response.data;
+};
+
+/**
  * Meminta Pengembalian Sepeda & Mengakhiri Sesi Sewa.
  */
 export const finishRentSession = async ({ bike_id }) => {
@@ -275,6 +290,18 @@ export const deleteAdminBike = async ({ bike_id }) => {
 export const getAdminBikeDetail = async (bikeId) => {
   const response = await api.get(
     `/admin/bikes/${encodeURIComponent(bikeId)}`,
+  );
+  return response.data;
+};
+
+/**
+ * Mengakhiri sesi sewa aktif pada satu sepeda dari dashboard admin.
+ * Backend menutup rental, membatalkan pending extension/pembayaran, lalu
+ * mengembalikan status sepeda ke AVAILABLE dan mengunci solenoid.
+ */
+export const endAdminBikeRental = async (bikeId) => {
+  const response = await api.post(
+    `/admin/bikes/${encodeURIComponent(bikeId)}/end-rental`,
   );
   return response.data;
 };

@@ -40,6 +40,7 @@ const COMMAND_ACTION_OPTIONS = [
   { value: "FORCE_LOCK", label: "Force Lock" },
   { value: "FORCE_UNLOCK", label: "Force Unlock" },
   { value: "ALARM_OFF", label: "Turn Off Alarm" },
+  { value: "END_RENTAL", label: "Akhiri Sesi Sewa" },
 ];
 
 const FilterSelect = ({ value, onChange, options, label }) => (

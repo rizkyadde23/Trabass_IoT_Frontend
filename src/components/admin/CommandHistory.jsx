@@ -12,6 +12,7 @@ const ACTION_LABELS = {
   FORCE_LOCK: "Force Lock",
   FORCE_UNLOCK: "Force Unlock",
   ALARM_OFF: "Turn Off Alarm",
+  END_RENTAL: "Akhiri Sesi Sewa",
 };
 
 const formatDateTime = (value) => {
@@ -49,7 +50,8 @@ const CommandHistory = ({
           Riwayat Perintah
         </h3>
         <p className="mt-0.5 text-[11px] text-slate-500">
-          Audit pengiriman force lock, force unlock, dan turn off alarm.
+          Audit perintah remote, force lock/unlock, alarm, dan pengakhiran sesi
+          oleh admin.
         </p>
       </div>
 

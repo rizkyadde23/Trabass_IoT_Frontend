@@ -136,7 +136,8 @@ const AdminMap = () => {
           <div>
             <h3 className="text-sm font-bold text-slate-800">Live Fleet Map</h3>
             <p className="mt-0.5 text-[11px] text-slate-500">
-              Klik marker untuk melihat data sensor dan lokasi terakhir.
+              Klik marker untuk melihat data sensor, membuka detail, atau
+              mengakhiri sesi sewa penyewa.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -158,6 +159,7 @@ const AdminMap = () => {
           onSendCommand={sendCommand}
           commandStates={commandStates}
           onClearFeedback={clearFeedback}
+          onRentalEnded={() => void refresh({ silent: true })}
           heightClass="h-[calc(100vh-19rem)] min-h-[520px]"
         />
 

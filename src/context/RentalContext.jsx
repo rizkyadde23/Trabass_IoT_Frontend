@@ -6,7 +6,8 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { getRentStatus } from "../services/api";
+import { getActiveRental, getRentStatus } from "../services/api";
+import { useAuth } from "./AuthContext";
 
 const RentalContext = createContext();
 
@@ -54,6 +55,17 @@ const normalizeRentalState = (state = {}, fallback = {}) => {
 };
 
 export const RentalProvider = ({ children }) => {
+  const { token, isAuthenticated, isAdmin, isInitializing, logout } = useAuth();
+
+  // Status hidrasi sesi sewa dari backend (dipakai untuk menahan render
+  // route agar tidak terlanjur melempar penyewa ke /register).
+  const [isRentalHydrating, setIsRentalHydrating] = useState(true);
+
+  // Pembayaran awal yang masih menunggu (dipulihkan dari backend).
+  // Berbeda dengan pendingOrder: objek ini tidak menyimpan snap_token,
+  // sehingga frontend mengarahkan ulang ke /payment?bike_id=...
+  const [pendingPayment, setPendingPayment] = useState(null);
+
   // State Sesi Sewa Aktif
   const [activeRental, setActiveRental] = useState(() => {
     const savedRental = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -68,6 +80,9 @@ export const RentalProvider = ({ children }) => {
   });
 
   const activeRentalRef = useRef(activeRental);
+
+  // Penanda request hidrasi terakhir agar hasil request lama diabaikan.
+  const hydrationRequestRef = useRef(0);
 
   useEffect(() => {
     activeRentalRef.current = activeRental;
@@ -108,10 +123,19 @@ export const RentalProvider = ({ children }) => {
     }
   }, [pendingOrder]);
 
+  // Ref agar efek hidrasi dapat memeriksa pending order lokal tanpa
+  // menjadikannya dependency (menghindari efek berjalan ulang saat dibersihkan).
+  const pendingOrderRef = useRef(pendingOrder);
+
+  useEffect(() => {
+    pendingOrderRef.current = pendingOrder;
+  }, [pendingOrder]);
+
   const setActiveRentalFromBackend = useCallback((state) => {
     const normalized = normalizeRentalState(state, activeRentalRef.current || {});
     activeRentalRef.current = normalized;
     setActiveRental(normalized);
+    setPendingPayment(null);
     return normalized;
   }, []);
 
@@ -126,7 +150,123 @@ export const RentalProvider = ({ children }) => {
   const clearRentalSession = useCallback(() => {
     activeRentalRef.current = null;
     setActiveRental(null);
+    setPendingPayment(null);
+    setPendingOrderState(null);
   }, []);
+
+  // Dipakai tepat setelah login penyewa: tahan redirect route sampai sesi
+  // sewa selesai diperiksa, sehingga penyewa yang masih menyewa tidak
+  // sempat dilempar ke halaman pembayaran.
+  const beginRentalHydration = useCallback(() => {
+    setIsRentalHydrating(true);
+  }, []);
+
+  /**
+   * Hidrasi sesi sewa dari backend.
+   *
+   * Sesi login penyewa bertahan di localStorage, tetapi detail rental
+   * (order_id, waktu berakhir, status) hanya ada di backend. Tanpa hidrasi,
+   * membuka kembali tab/browser akan mengarahkan penyewa ke /register
+   * padahal ia masih menyewa sepeda.
+   *
+   * Efek ini sengaja tidak memakai guard "sekali jalan" agar aman terhadap
+   * StrictMode (mount -> unmount -> mount): setiap eksekusi memakai
+   * requestId sendiri dan hasil yang sudah tidak relevan diabaikan.
+   */
+  useEffect(() => {
+    if (isInitializing) return undefined;
+
+    const requestId = hydrationRequestRef.current + 1;
+    hydrationRequestRef.current = requestId;
+    let cancelled = false;
+
+    const isCurrentRequest = () =>
+      !cancelled && hydrationRequestRef.current === requestId;
+
+    const finishHydration = () => {
+      if (isCurrentRequest()) setIsRentalHydrating(false);
+    };
+
+    // Admin tidak memiliki sesi sewa; pastikan state penyewa dibersihkan.
+    if (!isAuthenticated || isAdmin || !token) {
+      activeRentalRef.current = null;
+      setActiveRental(null);
+      setPendingPayment(null);
+      finishHydration();
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setIsRentalHydrating(true);
+
+    const hydrate = async () => {
+      try {
+        const response = await getActiveRental();
+        if (!isCurrentRequest()) return;
+
+        const data = response?.data || {};
+
+        if (data.active_rental) {
+          // Sewa berjalan / perpanjangan menunggu pembayaran.
+          setActiveRentalFromBackend(data.active_rental);
+          setPendingPayment(null);
+          setPendingOrderState(null);
+        } else if (data.pending_payment?.bike_id) {
+          // Sewa awal belum dibayar: lanjutkan lewat /payment.
+          activeRentalRef.current = null;
+          setActiveRental(null);
+          setPendingPayment({ ...data.pending_payment });
+
+          // Buang pending order lokal yang bukan milik transaksi backend
+          // (mis. sisa sesi penyewa sebelumnya di perangkat yang sama).
+          const localPending = pendingOrderRef.current;
+          if (
+            localPending?.order_id &&
+            localPending.order_id !== data.pending_payment.order_id
+          ) {
+            setPendingOrderState(null);
+          }
+        } else {
+          // Tidak ada sesi berjalan: buang sisa sesi lama di perangkat.
+          activeRentalRef.current = null;
+          setActiveRental(null);
+          setPendingPayment(null);
+          setPendingOrderState(null);
+        }
+      } catch (error) {
+        if (!isCurrentRequest()) return;
+
+        // Token tidak valid: akhiri sesi agar pengguna login ulang.
+        const status = error?.response?.status;
+        if (status === 401 || status === 403 || status === 404) {
+          activeRentalRef.current = null;
+          setActiveRental(null);
+          setPendingPayment(null);
+          logout();
+          return;
+        }
+
+        // Gangguan jaringan: pertahankan sesi lokal yang tersimpan agar
+        // penyewa tidak kehilangan akses ke halaman /active.
+      } finally {
+        finishHydration();
+      }
+    };
+
+    hydrate();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    isInitializing,
+    isAuthenticated,
+    isAdmin,
+    token,
+    logout,
+    setActiveRentalFromBackend,
+  ]);
 
   /**
    * Mengambil ulang status sesi langsung dari backend.
@@ -159,6 +299,9 @@ export const RentalProvider = ({ children }) => {
       value={{
         activeRental,
         pendingOrder,
+        pendingPayment,
+        isRentalHydrating,
+        beginRentalHydration,
         setRentalFromBackend: setActiveRentalFromBackend,
         updateRentalFromBackend: setActiveRentalFromBackend,
         refreshActiveRental,

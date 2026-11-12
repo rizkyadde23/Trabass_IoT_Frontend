@@ -16,6 +16,7 @@ import { useAuth } from "../context/AuthContext";
 import { finishRentSession, getApiErrorMessage } from "../services/api";
 import CountdownTimer from "../components/CountdownTimer";
 import ModalExtend from "../components/ModalExtend";
+import { SessionLoading } from "../components/ProtectedRoute";
 
 const ACTIVE_STATUSES = ["ACTIVE", "WARNING_SENT"];
 const FINISHED_STATUSES = ["COMPLETED", "CANCELLED", "EXPIRED"];
@@ -30,6 +31,7 @@ const ActiveRental = () => {
     activeRental,
     clearRentalSession,
     refreshActiveRental,
+    isRentalHydrating,
   } = useRental();
   const { user } = useAuth();
 
@@ -176,6 +178,11 @@ const ActiveRental = () => {
       setFinishing(false);
     }
   };
+
+  // Tunggu hidrasi dari backend sebelum menyatakan tidak ada sesi aktif.
+  if (isRentalHydrating && !activeRental) {
+    return <SessionLoading message="Memulihkan sesi sewa..." />;
+  }
 
   if (!activeRental) {
     return (

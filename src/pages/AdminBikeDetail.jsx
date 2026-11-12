@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   Activity,
@@ -14,6 +14,7 @@ import {
   Loader2,
   Lock,
   MapPin,
+  Power,
   Radio,
   RefreshCw,
   ShieldAlert,
@@ -22,6 +23,10 @@ import {
 } from "lucide-react";
 import useAdminBikeDetail from "../hooks/useAdminBikeDetail";
 import useBikeCommands from "../hooks/useBikeCommands";
+import {
+  endAdminBikeRental,
+  getApiErrorMessage,
+} from "../services/api";
 import { getBikeStatusMeta } from "../utils/fleetStats";
 import {
   formatCoordinate,
@@ -77,6 +82,13 @@ const REMOTE_ACTIONS = [
 
 const TELEMETRY_PAGE_STEP = 50;
 const TELEMETRY_MAX_LIMIT = 200;
+
+const SESSION_STATUS_LABELS = {
+  ACTIVE: "Aktif",
+  WARNING_SENT: "Segera berakhir",
+  OVERDUE: "Melewati batas waktu",
+  WAITING_PAYMENT: "Menunggu pembayaran",
+};
 
 const formatDateTime = (value) => {
   if (!value) return "—";
@@ -136,9 +148,14 @@ const AdminBikeDetail = () => {
 
   const [telemetryLimit, setTelemetryLimit] = useState(TELEMETRY_PAGE_STEP);
   const [confirmAction, setConfirmAction] = useState(null);
+  const [confirmEndRental, setConfirmEndRental] = useState(false);
+  const [endingRental, setEndingRental] = useState(false);
+  const [endRentalFeedback, setEndRentalFeedback] = useState(null);
 
   const {
     bike,
+    activeRental,
+    pendingPayment,
     telemetry,
     telemetryTotal,
     loading,
@@ -178,6 +195,47 @@ const AdminBikeDetail = () => {
 
   const handleShowOnMap = () => {
     navigate("/admin/map", { state: { bikeId } });
+  };
+
+  // Sesi yang dapat diakhiri admin: sewa berjalan, atau pembayaran awal
+  // yang masih menunggu (sepeda tertahan berstatus RESERVED).
+  const sessionInfo = activeRental || pendingPayment;
+  const canEndSession = Boolean(sessionInfo);
+
+  useEffect(() => {
+    setConfirmEndRental(false);
+    setEndRentalFeedback(null);
+  }, [bikeId]);
+
+  const handleEndRental = async () => {
+    if (!bikeId || endingRental || !canEndSession) return;
+
+    setEndingRental(true);
+    setEndRentalFeedback(null);
+
+    try {
+      const payload = await endAdminBikeRental(bikeId);
+
+      setEndRentalFeedback({
+        tone: "success",
+        message:
+          payload?.message ||
+          `Sesi sewa pada ${bikeId} berhasil diakhiri.`,
+      });
+      setConfirmEndRental(false);
+
+      await refresh({ silent: true });
+    } catch (endError) {
+      setEndRentalFeedback({
+        tone: "error",
+        message: getApiErrorMessage(
+          endError,
+          "Gagal mengakhiri sesi sewa. Silakan coba lagi.",
+        ),
+      });
+    } finally {
+      setEndingRental(false);
+    }
   };
 
   // --- State: sepeda tidak ditemukan -------------------------------------
@@ -596,6 +654,126 @@ const AdminBikeDetail = () => {
                 </button>
               </div>
             )}
+
+            {/* Akhiri sesi sewa penyewa */}
+            <div className="border-t border-slate-200 px-5 py-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+                    <Clock size={14} className="text-slate-400" />
+                    Sesi Sewa Penyewa
+                  </p>
+
+                  {sessionInfo ? (
+                    <div className="mt-1 space-y-0.5 text-[11px] leading-relaxed text-slate-500">
+                      <p>
+                        <span className="font-bold text-slate-700">
+                          {sessionInfo.user_name || "Penyewa"}
+                        </span>
+                        {sessionInfo.phone_number
+                          ? ` · ${sessionInfo.phone_number}`
+                          : ""}
+                      </p>
+                      <p>
+                        {activeRental
+                          ? `Berakhir ${formatDateTime(activeRental.end_time)}`
+                          : `Menunggu pembayaran · ${formatDateTime(
+                              pendingPayment?.start_time,
+                            )}`}
+                        {" · "}
+                        <span className="font-semibold text-slate-600">
+                          {SESSION_STATUS_LABELS[
+                            sessionInfo.rental_status
+                          ] || sessionInfo.rental_status}
+                        </span>
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+                      Tidak ada sesi sewa aktif pada sepeda ini.
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setConfirmEndRental(true);
+                    setEndRentalFeedback(null);
+                  }}
+                  disabled={!canEndSession || endingRental}
+                  title={
+                    canEndSession
+                      ? `Akhiri sesi sewa pada ${bikeId}`
+                      : "Tidak ada sesi sewa untuk diakhiri"
+                  }
+                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs font-bold text-rose-700 transition-colors hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-rose-50"
+                >
+                  {endingRental ? (
+                    <Loader2 size={15} className="animate-spin" />
+                  ) : (
+                    <Power size={15} />
+                  )}
+                  {endingRental ? "Mengakhiri..." : "Akhiri Sesi"}
+                </button>
+              </div>
+
+              {confirmEndRental && !endingRental && canEndSession && (
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-[11px] font-semibold text-rose-800">
+                  <p className="leading-relaxed">
+                    Akhiri sesi{" "}
+                    <span className="font-bold">
+                      {sessionInfo?.user_name || "penyewa"}
+                    </span>{" "}
+                    pada {bikeId}? Sepeda akan dikunci dan statusnya kembali{" "}
+                    <span className="font-bold">AVAILABLE</span>.
+                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => void handleEndRental()}
+                      className="rounded-lg bg-rose-600 px-2.5 py-1 text-[10px] font-bold text-white transition-colors hover:bg-rose-700"
+                    >
+                      Ya, Akhiri
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmEndRental(false)}
+                      className="rounded-lg border border-rose-300 bg-white px-2.5 py-1 text-[10px] font-bold text-rose-700 transition-colors hover:bg-rose-100"
+                    >
+                      Batal
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {endRentalFeedback && (
+                <div
+                  className={`mt-3 flex items-start gap-2.5 rounded-xl border px-3.5 py-3 text-[11px] leading-relaxed ${
+                    endRentalFeedback.tone === "success"
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                      : "border-rose-200 bg-rose-50 text-rose-800"
+                  }`}
+                >
+                  {endRentalFeedback.tone === "success" ? (
+                    <CheckCircle2 size={15} className="mt-0.5 shrink-0" />
+                  ) : (
+                    <AlertCircle size={15} className="mt-0.5 shrink-0" />
+                  )}
+                  <p className="min-w-0 flex-1 font-semibold">
+                    {endRentalFeedback.message}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setEndRentalFeedback(null)}
+                    className="shrink-0 rounded-md p-1 transition-colors hover:bg-black/5"
+                    aria-label="Tutup pesan"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+            </div>
           </section>
 
           {/* Riwayat telemetri */}

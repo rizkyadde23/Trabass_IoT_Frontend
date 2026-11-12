@@ -333,6 +333,7 @@ const AdminDashboard = () => {
           onSendCommand={sendCommand}
           commandStates={commandStates}
           onClearFeedback={clearFeedback}
+          onRentalEnded={() => void refresh({ silent: true })}
         />
 
         <div className="flex flex-col gap-1 border-t border-slate-100 bg-slate-50/60 px-5 py-2.5 text-[10px] text-slate-400 sm:flex-row sm:items-center sm:justify-between">

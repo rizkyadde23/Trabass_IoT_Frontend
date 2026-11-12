@@ -28,6 +28,7 @@ import {
   AdminGuestRoute,
   GuestRoute,
   RenterRoute,
+  SessionLoading,
 } from "./components/ProtectedRoute";
 
 /**
@@ -36,14 +37,32 @@ import {
  * hanya mengarahkan pengguna ke halaman yang relevan.
  */
 const RootRedirect = () => {
-  const { activeRental } = useRental();
-  const { isAuthenticated, isAdmin } = useAuth();
+  const { activeRental, pendingPayment, isRentalHydrating } = useRental();
+  const { isAuthenticated, isAdmin, isInitializing } = useAuth();
+
+  if (isInitializing) return <SessionLoading />;
 
   if (isAuthenticated) {
     if (isAdmin) return <Navigate to="/admin" replace />;
-    return (
-      <Navigate to={activeRental ? "/active" : "/register"} replace />
-    );
+
+    // Jangan arahkan ke /register sebelum sesi sewa selesai dipulihkan:
+    // penyewa yang masih menyewa harus mendarat di /active.
+    if (isRentalHydrating) {
+      return <SessionLoading message="Memulihkan sesi sewa..." />;
+    }
+
+    if (activeRental) return <Navigate to="/active" replace />;
+
+    if (pendingPayment?.bike_id) {
+      return (
+        <Navigate
+          to={`/payment?bike_id=${encodeURIComponent(pendingPayment.bike_id)}`}
+          replace
+        />
+      );
+    }
+
+    return <Navigate to="/register" replace />;
   }
 
   return <Navigate to="/register" replace />;

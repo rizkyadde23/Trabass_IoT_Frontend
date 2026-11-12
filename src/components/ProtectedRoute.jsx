@@ -7,11 +7,11 @@ const buildRedirectState = (location) => ({
   from: `${location.pathname}${location.search}`,
 });
 
-const SessionLoading = () => (
+export const SessionLoading = ({ message = "Memeriksa sesi login..." }) => (
   <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
     <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm font-semibold text-slate-600 shadow-sm">
       <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-brand-600" />
-      Memeriksa sesi login...
+      {message}
     </div>
   </div>
 );
@@ -34,6 +34,7 @@ const buildRegisterPath = (location) => {
  */
 export const RenterRoute = () => {
   const { isAuthenticated, isAdmin, isInitializing } = useAuth();
+  const { isRentalHydrating } = useRental();
   const location = useLocation();
 
   if (isInitializing) return <SessionLoading />;
@@ -44,6 +45,12 @@ export const RenterRoute = () => {
 
   if (isAdmin) {
     return <Navigate to="/admin" replace />;
+  }
+
+  // Tunggu pemulihan sesi sewa dari backend: penyewa yang masih menyewa
+  // harus tetap bisa membuka /active (extend / pengembalian).
+  if (isRentalHydrating) {
+    return <SessionLoading message="Memulihkan sesi sewa..." />;
   }
 
   return <Outlet />;
@@ -98,16 +105,45 @@ const buildPaymentPath = (location) => {
     : null;
 };
 
+/**
+ * Sewa awal yang belum dibayar dapat dilanjutkan kembali melalui /payment
+ * dengan bike_id yang sama (snap token lama tidak dapat dipulihkan).
+ */
+const buildPendingPaymentPath = (pendingPayment) =>
+  pendingPayment?.bike_id
+    ? `/payment?bike_id=${encodeURIComponent(pendingPayment.bike_id)}`
+    : null;
+
 export const GuestRoute = () => {
   const { isAuthenticated, isAdmin, isInitializing } = useAuth();
-  const { activeRental } = useRental();
+  const { activeRental, pendingPayment, isRentalHydrating } = useRental();
   const location = useLocation();
 
   if (isInitializing) return <SessionLoading />;
 
   if (isAuthenticated) {
     if (isAdmin) return <Navigate to="/admin" replace />;
+
+    if (isRentalHydrating) {
+      return <SessionLoading message="Memulihkan sesi sewa..." />;
+    }
+
     if (activeRental) return <Navigate to="/active" replace />;
+
+    // Lanjutkan pembayaran yang belum selesai untuk sepeda yang sama.
+    const scannedBikeId = (
+      new URLSearchParams(location.search).get("bike_id") || ""
+    )
+      .trim()
+      .toUpperCase();
+    const pendingPath = buildPendingPaymentPath(pendingPayment);
+
+    if (
+      pendingPath &&
+      (!scannedBikeId || scannedBikeId === pendingPayment.bike_id)
+    ) {
+      return <Navigate to={pendingPath} replace />;
+    }
 
     const paymentPath = buildPaymentPath(location);
     if (paymentPath) return <Navigate to={paymentPath} replace />;
@@ -120,20 +156,20 @@ export const GuestRoute = () => {
 
 /**
  * Halaman login admin. Admin yang sudah login langsung masuk dashboard.
- * Penyewa yang tanpa sengaja membuka halaman ini diarahkan ke alurnya
- * sendiri (bukan diizinkan login sebagai admin).
+ *
+ * Penyewa yang tersimpan di localStorage TIDAK diarahkan ke alur renter di
+ * sini: sejak sesi penyewa bertahan setelah browser ditutup, mengalihkan
+ * mereka akan membuat halaman login admin tidak pernah bisa dibuka di
+ * perangkat yang sama. Login admin yang berhasil akan menggantikan sesi
+ * penyewa (token renter dihapus dari localStorage).
  */
 export const AdminGuestRoute = () => {
   const { isAuthenticated, isAdmin, isInitializing } = useAuth();
-  const { activeRental } = useRental();
 
   if (isInitializing) return <SessionLoading />;
 
-  if (isAuthenticated) {
-    if (isAdmin) return <Navigate to="/admin" replace />;
-    return (
-      <Navigate to={activeRental ? "/active" : "/register"} replace />
-    );
+  if (isAuthenticated && isAdmin) {
+    return <Navigate to="/admin" replace />;
   }
 
   return <Outlet />;

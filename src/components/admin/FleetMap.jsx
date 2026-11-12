@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Circle,
   MapContainer,
@@ -14,12 +15,15 @@ import {
   AlertCircle,
   BellOff,
   CheckCircle2,
+  ExternalLink,
   Loader2,
   Lock,
+  Power,
   ShieldAlert,
   Unlock,
   X,
 } from "lucide-react";
+import { endAdminBikeRental, getApiErrorMessage } from "../../services/api";
 import { getBikeStatusMeta } from "../../utils/fleetStats";
 import {
   DEFAULT_GEOFENCE,
@@ -70,6 +74,17 @@ const REMOTE_ACTIONS = [
 
 const getActionLabel = (action) =>
   REMOTE_ACTIONS.find((item) => item.action === action)?.label || action;
+
+// Status sepeda yang menandakan masih ada sesi penyewa (sewa berjalan atau
+// pembayaran awal yang masih menunggu).
+const RENTAL_STATUSES = new Set(["RENTED", "OVERDUE", "RESERVED"]);
+
+const hasRentalSession = (bike) => {
+  const stored = String(bike?.stored_status || "").toUpperCase();
+  const effective = String(bike?.status || "").toUpperCase();
+
+  return RENTAL_STATUSES.has(stored) || RENTAL_STATUSES.has(effective);
+};
 
 const getConfirmMessage = (action, bikeId) => {
   if (action === "FORCE_LOCK") return `Kunci paksa ${bikeId}?`;
@@ -235,14 +250,21 @@ const MarkerPopup = ({
   commandState,
   onSendCommand,
   onClearFeedback,
+  onOpenDetail,
+  onEndRental,
+  onClearRentalFeedback,
+  rentalPending = false,
+  rentalFeedback = null,
 }) => {
   const [confirmAction, setConfirmAction] = useState(null);
+  const [confirmEndRental, setConfirmEndRental] = useState(false);
   const statusMeta = getBikeStatusMeta(bike.status);
   const coordinates = getBikeCoordinates(bike);
   const distanceM = getBikeDistanceFromStation(bike, geofence);
   const geofenceStatus = isBikeOutsideGeofence(bike, geofence);
   const stale = !bike.has_live_location || isTelemetryStale(bike.last_reported_at);
   const anomaly = isImuAnomaly(bike);
+  const canEndRental = hasRentalSession(bike);
 
   const pendingAction = commandState?.pending || null;
   const feedback = commandState?.feedback || null;
@@ -254,6 +276,13 @@ const MarkerPopup = ({
     const action = confirmAction;
     setConfirmAction(null);
     await onSendCommand({ bikeId: bike.bike_id, action });
+  };
+
+  const handleConfirmEndRental = async () => {
+    if (!onEndRental || rentalPending) return;
+
+    setConfirmEndRental(false);
+    await onEndRental(bike.bike_id);
   };
 
   return (
@@ -444,6 +473,89 @@ const MarkerPopup = ({
             )}
           </div>
         )}
+
+        {/* Detail sepeda & akhiri sesi penyewa */}
+        <div className="mt-2.5 grid grid-cols-2 gap-1.5 border-t border-slate-100 pt-2.5">
+          <button
+            type="button"
+            onClick={() => onOpenDetail?.(bike.bike_id)}
+            title={`Buka detail ${bike.bike_id}`}
+            className="flex items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-2 text-[9px] font-bold text-slate-700 transition-colors hover:bg-slate-50"
+          >
+            <ExternalLink size={13} />
+            Detail
+          </button>
+          <button
+            type="button"
+            disabled={!canEndRental || rentalPending}
+            onClick={() => setConfirmEndRental(true)}
+            title={
+              canEndRental
+                ? `Akhiri sesi sewa pada ${bike.bike_id}`
+                : "Tidak ada sesi sewa aktif pada sepeda ini"
+            }
+            className="flex items-center justify-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2 py-2 text-[9px] font-bold text-rose-700 transition-colors hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-rose-50"
+          >
+            {rentalPending ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <Power size={13} />
+            )}
+            {rentalPending ? "Mengakhiri..." : "Akhiri Sesi"}
+          </button>
+        </div>
+
+        {confirmEndRental && canEndRental && !rentalPending && (
+          <div className="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-2 text-[10px] text-rose-800">
+            <p className="font-semibold">
+              Akhiri sesi sewa {bike.bike_id}? Sepeda akan dikunci dan statusnya
+              kembali AVAILABLE.
+            </p>
+            <div className="mt-1.5 flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => void handleConfirmEndRental()}
+                className="rounded-md bg-rose-600 px-2 py-1 text-[9px] font-bold text-white transition-colors hover:bg-rose-700"
+              >
+                Ya, Akhiri
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmEndRental(false)}
+                className="rounded-md border border-rose-300 bg-white px-2 py-1 text-[9px] font-bold text-rose-700 transition-colors hover:bg-rose-100"
+              >
+                Batal
+              </button>
+            </div>
+          </div>
+        )}
+
+        {rentalFeedback && (
+          <div
+            className={`mt-2 flex items-start gap-1.5 rounded-lg border px-2.5 py-2 text-[10px] ${
+              rentalFeedback.tone === "success"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                : "border-rose-200 bg-rose-50 text-rose-700"
+            }`}
+          >
+            {rentalFeedback.tone === "success" ? (
+              <CheckCircle2 size={12} className="mt-0.5 shrink-0" />
+            ) : (
+              <AlertCircle size={12} className="mt-0.5 shrink-0" />
+            )}
+            <span className="min-w-0 flex-1">{rentalFeedback.message}</span>
+            {onClearRentalFeedback && (
+              <button
+                type="button"
+                onClick={() => onClearRentalFeedback(bike.bike_id)}
+                aria-label="Tutup pesan sesi"
+                className="shrink-0 rounded p-0.5 transition-colors hover:bg-white/70"
+              >
+                <X size={11} />
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -486,10 +598,79 @@ const FleetMap = ({
   onSendCommand,
   commandStates = {},
   onClearFeedback,
+  onRentalEnded,
   heightClass = "h-[420px] sm:h-[520px]",
   className = "",
 }) => {
   const mapRef = useRef(null);
+  const navigate = useNavigate();
+
+  // Status pengakhiran sesi per sepeda. Disimpan di level peta agar tetap
+  // tampil walau popup ditutup/dibuka kembali saat polling memperbarui data.
+  const [rentalBusy, setRentalBusy] = useState({});
+  const [rentalFeedback, setRentalFeedback] = useState({});
+  const rentalInFlightRef = useRef(new Set());
+
+  const handleOpenDetail = useCallback(
+    (bikeId) => {
+      if (!bikeId) return;
+      navigate(`/admin/bikes/${encodeURIComponent(bikeId)}`);
+    },
+    [navigate],
+  );
+
+  const handleEndRental = useCallback(
+    async (bikeId) => {
+      if (!bikeId || rentalInFlightRef.current.has(bikeId)) return;
+
+      rentalInFlightRef.current.add(bikeId);
+      setRentalBusy((current) => ({ ...current, [bikeId]: true }));
+      setRentalFeedback((current) => {
+        const next = { ...current };
+        delete next[bikeId];
+        return next;
+      });
+
+      try {
+        const payload = await endAdminBikeRental(bikeId);
+
+        setRentalFeedback((current) => ({
+          ...current,
+          [bikeId]: {
+            tone: "success",
+            message:
+              payload?.message ||
+              `Sesi sewa pada ${bikeId} berhasil diakhiri.`,
+          },
+        }));
+
+        onRentalEnded?.(bikeId);
+      } catch (endError) {
+        setRentalFeedback((current) => ({
+          ...current,
+          [bikeId]: {
+            tone: "error",
+            message: getApiErrorMessage(
+              endError,
+              "Gagal mengakhiri sesi sewa. Silakan coba lagi.",
+            ),
+          },
+        }));
+      } finally {
+        rentalInFlightRef.current.delete(bikeId);
+        setRentalBusy((current) => ({ ...current, [bikeId]: false }));
+      }
+    },
+    [onRentalEnded],
+  );
+
+  const handleClearRentalFeedback = useCallback((bikeId) => {
+    setRentalFeedback((current) => {
+      const next = { ...current };
+      delete next[bikeId];
+      return next;
+    });
+  }, []);
 
   const bikesWithCoordinates = useMemo(
     () =>
@@ -596,6 +777,11 @@ const FleetMap = ({
                 commandState={commandStates[bike.bike_id]}
                 onSendCommand={onSendCommand}
                 onClearFeedback={onClearFeedback}
+                onOpenDetail={handleOpenDetail}
+                onEndRental={handleEndRental}
+                onClearRentalFeedback={handleClearRentalFeedback}
+                rentalPending={Boolean(rentalBusy[bike.bike_id])}
+                rentalFeedback={rentalFeedback[bike.bike_id] || null}
               />
             </Popup>
           </Marker>
